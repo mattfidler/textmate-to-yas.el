@@ -1,0 +1,15 @@
+#+TITLE: Import Textmate bundles into Emacs using lisp
+#+AUTHOR: Matthew L. Fidler
+
+This library allows you to import TextMate bundle snippets to
+Yasnippet
+
+To use, put in a directory in the load path, like ~/elisp and put
+the following in ~/.emacs
+
+#+BEGIN_SRC emacs-lisp :results silent
+(require 'textmate-to-yas)
+#+END_SRC
+
+If you wish to use a snippet from GitHub, just drag the .tar.gz
+file to emacs while Yasnippet is running
