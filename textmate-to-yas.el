@@ -6,16 +6,12 @@
 ;; Maintainer: Matthew L. Fidler
 ;; Created: Wed Oct 20 15:08:50 2010 (-0500)
 ;; Version: 0.13
-;; Last-Updated: Fri Nov 18 16:26:11 2011 (-0600)
+;; Last-Updated: Mon Nov 21 12:38:43 2011 (-0600)
 ;;           By: Matthew L. Fidler
-;;     Update #: 1483
+;;     Update #: 1495
 ;; URL: http://www.emacswiki.org/emacs/textmate-import.el
 ;; Keywords: Yasnippet Textmate
 ;; Compatibility: Tested with Windows Emacs 23.2
-;;
-;; Features that might be required by this library:
-;;
-;;   None
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -34,6 +30,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;; 21-Nov-2011    Matthew L. Fidler  
+;;    Last-Updated: Mon Nov 21 12:37:16 2011 (-0600) #1494 (Matthew L. Fidler)
+;;    Tested with bsd-tar on windows and changed some extraction behaviors.
 ;; 01-Apr-2011    Matthew L. Fidler
 ;;    Last-Updated: Tue Feb  8 08:58:39 2011 (-0600) #1473 (Matthew L. Fidler)
 ;;    Changed `yas/ma' so that it applies the mirrors upon moving away.
@@ -835,21 +834,25 @@ Possible choices are:
                               textmate-import-convert-env-lst)))))
                 mode)
           (setq textmate-import-convert-env-lst '()))))))
+
+;;;###autoload
 (defun textmate-import-drag-and-drop (uri &rest ignore)
   "* Drag and drop interface to import files."
   (let ((f (dnd-get-local-file-name uri t)) ret)
     (when (and yas/minor-mode
                (string-match "[/\\\\]\\([^\n/\\\\-]*?\\)-\\([^\n/\\\\.]*?\\)\\([.]tmbundle\\)\\(.*\\)\\([.]tar[.]gz\\)$" uri)
-               (yes-or-no-p (format "Would you like to import %s git-hub tarball into Yasnippet?" uri)))
+               (yes-or-no-p (format "Would you like to import %s git-hub tarball into Yasnippet?" f)))
       (textmate-import-git-tar.gz f "text-mode")
       (setq ret 't))
-    (symbol-value 'ret)
-    ))
+    (symbol-value 'ret)))
+
+;;;###autoload
 (defadvice dnd-open-local-file (around textmate-import-drag-and-drop activate)
   "* Drag Textmate git-hub tar.gz files to import into Yasnippet."
   (unless (textmate-import-drag-and-drop (ad-get-arg 0))
     ad-do-it))
 
+;;;###autoload
 (defadvice dnd-open-file (around textmate-import-drag-and-drop activate)
   "* Drag Textmate git-hub tar.gz files to import into Yasnippet."
   (unless (textmate-import-drag-and-drop (ad-get-arg 0))
@@ -868,8 +871,7 @@ Possible choices are:
         (cmd (if (fboundp 'shell-command-to-string) 'shell-command-to-string 'exec-to-string))
         (pwd (if (buffer-file-name) (file-name-directory (buffer-file-name)) (expand-file-name "./")))
         temp-dir new-file
-        new-dir
-        )
+        new-dir)
     (save-excursion
       (if (not (and gz tar rm))
           (error "Can't find gzip or tar.  Can't decompress")
@@ -879,12 +881,20 @@ Possible choices are:
                                         (match-string 1 file)
                                         (match-string 2 file)
                                         (match-string 4 file)))
-          (message "Decompressing tar ball")
-          (setq temp-dir (make-temp-file "textmate-import" 't))
-          (cd temp-dir)
-          (message "%s" (apply cmd (list (format "%s -d -c %s | %s -xv" gz file tar))))
-          (setq new-file (concat temp-dir "/" (match-string 1 file) "-" (match-string 2 file) (match-string 3 file)
+          (save-match-data
+            (message "Decompressing tar ball")
+            (setq temp-dir (make-temp-file "textmate-import" 't))
+            (cd temp-dir)
+            (message "%s" (format "%s -d %s " gz file))
+            (message "%s" (apply cmd (list (format "%s -d %s" gz file))))
+            (message "%s" (format "%s -xvf %s" tar (substring file 0 -3)))
+            (message "%s" (apply cmd (list (format "%s -xvf %s" tar (substring file 0 -3)))))
+            (message "%s" (format "%s %s " gz (substring file 0 -3)))
+            (message "%s" (apply cmd (list (format "%s %s" gz (substring file 0 -3))))))
+          (setq new-file (concat temp-dir "/" (match-string 1 file)
+                                 "-" (match-string 2 file) (match-string 3 file)
                                  (match-string 4 file) "/"))
+          (message "textmate-import-bundle: %s %s %s" new-file parent-modes original-author)
           (textmate-import-bundle new-file parent-modes original-author)
           )))
     (cd temp-dir)
