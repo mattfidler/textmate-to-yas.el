@@ -6,9 +6,9 @@
 ;; Maintainer: Matthew L. Fidler
 ;; Created: Wed Oct 20 15:08:50 2010 (-0500)
 ;; Version: 0.14
-;; Last-Updated: Tue Nov 22 12:57:34 2011 (-0600)
+;; Last-Updated: Tue Nov 22 13:09:01 2011 (-0600)
 ;;           By: Matthew L. Fidler
-;;     Update #: 1501
+;;     Update #: 1505
 ;; URL: http://www.emacswiki.org/emacs/textmate-import.el
 ;; Keywords: Yasnippet Textmate
 ;; Compatibility: Tested with Windows Emacs 23.2
@@ -30,6 +30,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;; 22-Nov-2011    Matthew L. Fidler  
+;;    Last-Updated: Tue Nov 22 13:06:56 2011 (-0600) #1502 (Matthew L. Fidler)
+;;    Another small fix for quoted parenthesis \}
 ;; 22-Nov-2011    Matthew L. Fidler  
 ;;    Last-Updated: Tue Nov 22 12:55:43 2011 (-0600) #1499 (Matthew L. Fidler)
 ;;    Added a fix for Textmate imports to avoid yasnippet bug.
@@ -541,7 +544,10 @@ Possible choices are:
       ;; Fix the condition ${#:{ to display correctly
       (goto-char (point-min))
       (while (re-search-forward "[$][{]\\([0-9]+\\)[:][{]" nil t nil)
-        (replace-match "${\\1:`\"\"`{"))
+        (replace-match "${\\1:`\"{\"`"))
+      (goto-char (point-min))
+      (while (search-forward "\\}" nil t)
+        (replace-match "`\"}\"`"))
       (setq ret (buffer-substring (point-min) (point-max))))
     (symbol-value 'ret)))
 (defun textmate-get-group (uuid plist)
