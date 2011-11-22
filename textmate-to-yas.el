@@ -5,10 +5,10 @@
 ;; Author: Matthew L. Fidler
 ;; Maintainer: Matthew L. Fidler
 ;; Created: Wed Oct 20 15:08:50 2010 (-0500)
-;; Version: 0.13
-;; Last-Updated: Mon Nov 21 12:38:43 2011 (-0600)
+;; Version: 0.14
+;; Last-Updated: Tue Nov 22 12:57:34 2011 (-0600)
 ;;           By: Matthew L. Fidler
-;;     Update #: 1495
+;;     Update #: 1501
 ;; URL: http://www.emacswiki.org/emacs/textmate-import.el
 ;; Keywords: Yasnippet Textmate
 ;; Compatibility: Tested with Windows Emacs 23.2
@@ -30,6 +30,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;; 22-Nov-2011    Matthew L. Fidler  
+;;    Last-Updated: Tue Nov 22 12:55:43 2011 (-0600) #1499 (Matthew L. Fidler)
+;;    Added a fix for Textmate imports to avoid yasnippet bug.
+;;    See: https://github.com/capitaomorte/yasnippet/issues/197
 ;; 21-Nov-2011    Matthew L. Fidler  
 ;;    Last-Updated: Mon Nov 21 12:37:16 2011 (-0600) #1494 (Matthew L. Fidler)
 ;;    Tested with bsd-tar on windows and changed some extraction behaviors.
@@ -352,7 +356,7 @@ Possible choices are:
         ("[$]TM_LINE_INDEX" "`yas/current-column`")
         ;; Unsupported:
         ;; TM_SOFT_TABS, TM_SUPPORT_PATH, TM_TAB_SIZE
-
+        
         ;; There are situations where we want our placeholder text
         ;; mirrored but with slight changes or where we want some text to
         ;; appear depending on the value/presence of a placeholder.
@@ -375,7 +379,7 @@ Possible choices are:
         ;; SHIFT|CONTROL|OPTION|COMMAND (in case all modifiers were down).
 
         ("[$][{]\\([A-Za-z].*?\\):[$]TM_FULLNAME[}]" "`(or (yas/getenv \"\\1\") (user-full-name))`") ;
-
+        
         ("[$][{]\\([A-Za-z].*?\\):[$]TM_CURRENT_LINE[}]" "`(or (yas/getenv \"\\1\") yas/current-line)`") ;
         ("[$][{]\\([A-Za-z].*?\\):[$]TM_CURRENT_WORD[}]" "`(or (yas/getenv \"\\1\") yas/current-word)`") ;
         
@@ -444,9 +448,8 @@ Possible choices are:
         (setq tmp0 (match-string 1))
         (save-excursion
           (while (search-forward tmp nil t)
-            (replace-match (concat "$" tmp0) t t)
-            )))
-
+            (replace-match (concat "$" tmp0) t t))))
+      
       ;; Now replace Textmate mirrors $(1/reg/expr)
       (goto-char (point-min))
       (while (re-search-forward "\\([$][{][0-9]+\\)/" nil t)
@@ -506,7 +509,7 @@ Possible choices are:
       (setq max (+ 1 (string-to-int max)))
       (while (search-forward "`(or yas/selected-text \"\")`" nil t)
         (replace-match (format "${%s:`yas/selected-text`}" max) 't 't))
-
+      
       ;; Now replace (yas/t/ "".*) with the appropriate list
       (setq i 0)
       (goto-char (point-min))
@@ -535,6 +538,10 @@ Possible choices are:
         (insert "\")")
         (goto-char (point-min))
         (insert lst))
+      ;; Fix the condition ${#:{ to display correctly
+      (goto-char (point-min))
+      (while (re-search-forward "[$][{]\\([0-9]+\\)[:][{]" nil t nil)
+        (replace-match "${\\1:`\"\"`{"))
       (setq ret (buffer-substring (point-min) (point-max))))
     (symbol-value 'ret)))
 (defun textmate-get-group (uuid plist)
@@ -699,7 +706,7 @@ Possible choices are:
                         (setq binding (replace-match (nth 1 x) t nil binding))
                         (setq start (+ (- (length binding) len) (match-end 0))))))
                   '(
-                    ("&lt;" "<")
+                    ("&lt;" "<")        ;
                     ("&gt;" ">")
                     ("[@]\\(.\\)" "M-\\1")
                     ("\\^\\(.\\)" "C-\\1")
@@ -910,8 +917,10 @@ Possible choices are:
     (setq dir (concat dir "/")))
   (let (snip-dir snips plist (new-dir (if (eq (type-of 'yas/root-directory) 'symbol)
                                           yas/root-directory
-                                        (nth 0 yas/root-directory)
-                                        )))
+                                        (nth 0 yas/root-directory))))
+    (unless (or (string= (substring new-dir -1) "/")
+                (string= (substring new-dir -1) "\\"))
+      (setq new-dir (concat new-dir "/")))
     (when (file-exists-p (concat dir "info.plist"))
       (setq plist (with-temp-buffer (insert-file-contents (concat dir "info.plist"))
                                     (buffer-substring (point-min) (point-max))))
