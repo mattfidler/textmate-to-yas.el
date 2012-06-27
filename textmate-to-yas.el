@@ -6,9 +6,9 @@
 ;; Maintainer: Matthew L. Fidler
 ;; Created: Wed Oct 20 15:08:50 2010 (-0500)
 ;; Version: 0.14
-;; Last-Updated: Tue Nov 22 13:09:01 2011 (-0600)
+;; Last-Updated: Wed Jun 27 14:52:00 2012 (-0500)
 ;;           By: Matthew L. Fidler
-;;     Update #: 1505
+;;     Update #: 1523
 ;; URL: http://www.emacswiki.org/emacs/textmate-import.el
 ;; Keywords: Yasnippet Textmate
 ;; Compatibility: Tested with Windows Emacs 23.2
@@ -30,6 +30,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;; 27-Jun-2012    Matthew L. Fidler  
+;;    Last-Updated: Wed Jun 27 14:49:05 2012 (-0500) #1522 (Matthew L. Fidler)
+;;    @capitaomorte suggested more customization.  Implemented.
+;; 27-Jun-2012    Matthew L. Fidler  
+;;    Last-Updated: Wed Jun 27 13:49:04 2012 (-0500) #1510 (Matthew L. Fidler)
+;;    Added the ability to transform bundle specific transformations
 ;; 22-Nov-2011    Matthew L. Fidler  
 ;;    Last-Updated: Tue Nov 22 13:06:56 2011 (-0600) #1502 (Matthew L. Fidler)
 ;;    Another small fix for quoted parenthesis \}
@@ -238,29 +244,90 @@ Possible choices are:
           (setq val-stop (match-beginning 0))
           (setq content (buffer-substring val-start val-stop)))))
     (symbol-value 'content)))
-(setq textmate-regexp-to-emacs-regexp-known '(;Textmate  Emacs
-                                              ("\\A" "\\\`") ;; Beginning of String ->
-                                              ("\\Z" "\\\'") ;; End of String (or before newline at end of file)
-                                              ("\\z" "\\\'") ;; End of String
-                                              ("\\s" "\\s-")
-                                              ("\\S" "\\S-")
-                                              ("\\w" "\\sw")
-                                              ("\\W" "\\Sw")
 
-                                              ("\\d" "[0-9]")
-                                              ("\\D" "[^0-9]")
-                                              ("\\n" "\n")
-                                              ("\\t" "\t")
-                                              ;; ascii, alnum, blank, cntrl, digit, graph, lower
-                                              ;; multibyte, nonascii, print, punct, space, unibyte, upper
-                                              ;; word, xdigit
-                                              ;; I'm not sure negation works the same [:^ascii:].  I will assume so for
-                                              ;; now.
-                                              ("\\p{Alphanum}" "[A-Za-z0-9]")
-                                              ("\\p{^Alphanum}" "[^A-Za-z0-9]")
-                                              ("\\h" "[0-9a-fA-F]")
-                                              ("\\H" "[^0-9a-fA-F]")
-                                              ))
+(defcustom textmate-import-key-bindings nil
+  "Import key bindings into the snippets."
+  :type 'boolean
+  :group 'textmate-import)
+
+(defcustom textmate-default-key-prefix "C-c C-y"
+  "When importing key codes, this prefix is used as well.
+
+For example if a Textmate snippet specifies a key of Meta-A, the emacs key specified is
+`textmate-default-key-prefix' added to the detected key.  With the default C-c C-y, this
+becomes:
+
+C-c C-y M-a
+"
+  :type 'string
+  :group 'textmate-import
+  )
+(defcustom textmate-key-to-emacs-key-known
+  '(
+    ("&lt;" "<")        ;
+    ("&gt;" ">")
+    ("[@]\\(.\\)" "M-\\1")
+    ("\\^\\(.\\)" "C-\\1")
+    (?\C-a "C-a")
+    (?\C-b "C-b")
+    (?\C-c "C-c")
+    (?\C-d "C-d")
+    (?\C-e "C-e")
+    (?\C-f "C-f")
+    (?\C-g "C-g")
+    (?\C-h "C-h")
+    (?\C-i "C-i")
+    (?\C-j "C-j")
+    (?\C-k "C-k")
+    (?\C-l "C-l")
+    (?\C-m "C-m")
+    (?\C-n "C-n")
+    (?\C-o "C-o")
+    (?\C-p "C-p")
+    (?\C-q "C-q")
+    (?\C-r "C-r")
+    (?\C-s "C-s")
+    (?\C-t "C-t")
+    (?\C-u "C-u")
+    (?\C-v "C-v")
+    (?\C-w "C-w")
+    (?\C-x "C-x")
+    (?\C-y "C-y")
+    (?\C-z "C-z"))
+  "Textmate Key to Emacs Key"
+  :group 'textmate-import
+  :type '(repeat
+          (list (sexp :tag "Texmate Key/Regular Expression for Key")
+                (string :tag "Emacs Replacement"))))
+
+(defcustom textmate-regexp-to-emacs-regexp-known
+  '(;Textmate  Emacs
+    ("\\A" "\\\`") ;; Beginning of String ->
+    ("\\Z" "\\\'") ;; End of String (or before newline at end of file)
+    ("\\z" "\\\'") ;; End of String
+    ("\\s" "\\s-")
+    ("\\S" "\\S-")
+    ("\\w" "\\sw")
+    ("\\W" "\\Sw")
+    
+    ("\\d" "[0-9]")
+    ("\\D" "[^0-9]")
+    ("\\n" "\n")
+    ("\\t" "\t")
+    ;; ascii, alnum, blank, cntrl, digit, graph, lower
+    ;; multibyte, nonascii, print, punct, space, unibyte, upper
+    ;; word, xdigit
+    ;; I'm not sure negation works the same [:^ascii:].  I will assume so for
+    ;; now.
+    ("\\p{Alphanum}" "[A-Za-z0-9]")
+    ("\\p{^Alphanum}" "[^A-Za-z0-9]")
+    ("\\h" "[0-9a-fA-F]")
+    ("\\H" "[^0-9a-fA-F]"))
+  "Known Textmate to Emacs regular expression translations."
+  :group 'textmate-import
+  :type '(repeat
+          (list (regexp :tag "Textmate Expression")
+                (string :tag "Emacs Expression"))))
 
 (defun textmate-regexp-to-emacs-regexp (rexp)
   "* Convert a textmate regular expression to an emacs regular expression (as much as possible)"
@@ -271,7 +338,7 @@ Possible choices are:
       (with-temp-buffer
         ;; Emacs http://www.gnu.org/software/emacs/manual/html_node/elisp/Syntax-of-Regexps.html#Syntax-of-Regexps
         ;; Textmate http://manual.macromates.com/en/drag_commands#drag_commands
-
+        
         ;; \w => \w
         ;; \W => \W
         ;; \s => \s- (Whitespace)
@@ -329,73 +396,75 @@ Possible choices are:
                           ( (string= (match-string 0) (string ?\C-c)) "{")
                           ( (string= (match-string 0) (string ?\C-d)) "}")
                           ( (string= (match-string 0) (string ?\C-f)) "\\\\")
-                          ( (string= (match-string 0) (string ?\C-e)) "|")) 't 't)
-
-          )
+                          ( (string= (match-string 0) (string ?\C-e)) "|")) 't 't))
         (mapc
          (lambda(x)
            (goto-char (point-min))
            (while (re-search-forward (regexp-quote (nth 0 x)) nil 't)
-             (replace-match (nth 1 x) 't 't))
-           )
-         textmate-regexp-to-emacs-regexp-known
-         )
+             (replace-match (nth 1 x) 't 't)))
+         textmate-regexp-to-emacs-regexp-known)
         (setq ret (concat "\\(?:" (buffer-substring-no-properties (point-min) (point-max)) "\\)"))))))
-(setq textmate-import-convert-known-expressions
-      '(
-        ("&lt;" "<")
-        ("&gt;" ">")
-        ("[$][{]\\([0-9]+\\):[$]TM_SELECTED_TEXT[}]" "${\\1:`yas/selected-text`}")
-        ("[$][{]\\([0-9]+\\)[}]" "$\\1")
-        ("[$][{]TM_SELECTED_TEXT:\\([^\\}]*\\)[}]" "`(or yas/selected-text \"\\1\")`")
-        ("[$][{]TM_SELECTED_TEXT[}]" "`(or yas/selected-text \"\")`")
-        ("[$]TM_SELECTED_TEXT" "`(or yas/selected-text \"\")`")
-        ;; See http://manual.macromates.com/en/environment_variables.html
 
-        ("[$]TM_CURRENT_LINE" "`yas/current-line`")
-        ("[$]TM_CURRENT_WORD" "`yas/current-word`")
-        ("[$]TM_DIRECTORY" "`yas/current-dir`")
-        ("[$]TM_FILEPATH" "`yas/current-path`")
-        ("[$]TM_LINE_INDEX" "`yas/current-column`")
-        ;; Unsupported:
-        ;; TM_SOFT_TABS, TM_SUPPORT_PATH, TM_TAB_SIZE
-        
-        ;; There are situations where we want our placeholder text
-        ;; mirrored but with slight changes or where we want some text to
-        ;; appear depending on the value/presence of a placeholder.
+(defcustom textmate-import-convert-known-expressions
+  '(
+    ("&lt;" "<")
+    ("&gt;" ">")
+    ("[$][{]\\([0-9]+\\):[$]TM_SELECTED_TEXT[}]" "${\\1:`yas/selected-text`}")
+    ("[$][{]\\([0-9]+\\)[}]" "$\\1")
+    ("[$][{]TM_SELECTED_TEXT:\\([^\\}]*\\)[}]" "`(or yas/selected-text \"\\1\")`")
+    ("[$][{]TM_SELECTED_TEXT[}]" "`(or yas/selected-text \"\")`")
+    ("[$]TM_SELECTED_TEXT" "`(or yas/selected-text \"\")`")
+    ;; See http://manual.macromates.com/en/environment_variables.html
+    
+    ("[$]TM_CURRENT_LINE" "`yas/current-line`")
+    ("[$]TM_CURRENT_WORD" "`yas/current-word`")
+    ("[$]TM_DIRECTORY" "`yas/current-dir`")
+    ("[$]TM_FILEPATH" "`yas/current-path`")
+    ("[$]TM_LINE_INDEX" "`yas/current-column`")
+    ;; Unsupported:
+    ;; TM_SOFT_TABS, TM_SUPPORT_PATH, TM_TAB_SIZE
+    
+    ;; There are situations where we want our placeholder text
+    ;; mirrored but with slight changes or where we want some text to
+    ;; appear depending on the value/presence of a placeholder.
+    
+    ;; We can accomplish this by doing a regular expression
+    ;; substitution on the placeholder text (when mirroring it). The
+    ;; syntax for this is: ${<<tab stop>>/<<regexp>>/<<format>>/<<options>>}.
+    
+    
+    ;; Also see http://manual.macromates.com/en/drag_commands#drag_commands
+    
+    ;; TM_DROPPED_FILE -- relative path of the file dropped (relative
+    ;; to the document directory, which is also set as the current
+    ;; directory).
 
-        ;; We can accomplish this by doing a regular expression
-        ;; substitution on the placeholder text (when mirroring it). The
-        ;; syntax for this is: ${<<tab stop>>/<<regexp>>/<<format>>/<<options>>}.
+    ;; TM_DROPPED_FILEPATH -- the absolute path of the file dropped.
+    
+    ;; TM_MODIFIER_FLAGS -- the modifier keys which were held down
+    ;; when the file got dropped. This is a bitwise OR in the form:
+    ;; SHIFT|CONTROL|OPTION|COMMAND (in case all modifiers were down).
 
-
-        ;; Also see http://manual.macromates.com/en/drag_commands#drag_commands
-        
-        ;; TM_DROPPED_FILE -- relative path of the file dropped (relative
-        ;; to the document directory, which is also set as the current
-        ;; directory).
-
-        ;; TM_DROPPED_FILEPATH -- the absolute path of the file dropped.
-
-        ;; TM_MODIFIER_FLAGS -- the modifier keys which were held down
-        ;; when the file got dropped. This is a bitwise OR in the form:
-        ;; SHIFT|CONTROL|OPTION|COMMAND (in case all modifiers were down).
-
-        ("[$][{]\\([A-Za-z].*?\\):[$]TM_FULLNAME[}]" "`(or (yas/getenv \"\\1\") (user-full-name))`") ;
-        
-        ("[$][{]\\([A-Za-z].*?\\):[$]TM_CURRENT_LINE[}]" "`(or (yas/getenv \"\\1\") yas/current-line)`") ;
-        ("[$][{]\\([A-Za-z].*?\\):[$]TM_CURRENT_WORD[}]" "`(or (yas/getenv \"\\1\") yas/current-word)`") ;
-        
-        
-        ("[$]TM_FULLNAME" "`(user-full-name)`")
+    ("[$][{]\\([A-Za-z].*?\\):[$]TM_FULLNAME[}]" "`(or (yas/getenv \"\\1\") (user-full-name))`") ;
+    
+    ("[$][{]\\([A-Za-z].*?\\):[$]TM_CURRENT_LINE[}]" "`(or (yas/getenv \"\\1\") yas/current-line)`") ;
+    ("[$][{]\\([A-Za-z].*?\\):[$]TM_CURRENT_WORD[}]" "`(or (yas/getenv \"\\1\") yas/current-word)`") ;
+    
+    
+    ("[$]TM_FULLNAME" "`(user-full-name)`")
                                         ;    ("`date +[+]\\(.*?\\)`" "`(format-time-string \"\\1\")`")
-        
-        ;; Unknown environment commands.  They can be taught!
-        ("[$][{]\\([A-Za-z].*?\\):\\(\\(?:.*?[\\\\][}]\\)*.*?\\)[}]" "`(or (yas/getenv \"\\1\") \"\\2\")`") ;
-        ("[$][{]\\([A-Za-z].*?\\)[}]" "`(or (yas/getenv \"\\1\") \"\")`"))
-                                        ;  "*Textmate import convert known expressions"
-      
-      )
+    
+    ;; Unknown environment commands.  They can be taught!
+    ("[$][{]\\([A-Za-z].*?\\):\\(\\(?:.*?[\\\\][}]\\)*.*?\\)[}]" "`(or (yas/getenv \"\\1\") \"\\2\")`") ;
+    ("[$][{]\\([A-Za-z].*?\\)[}]" "`(or (yas/getenv \"\\1\") \"\")`"))
+                                        ;  "*Textmate import convert
+                                        ;  known expressions"
+  "Known Textmate Expressions"
+  :group 'textmate-import
+  :type '(repeat
+          (list (regexp :tag "Regular Expression for Textmate known tag")
+                (string :tag "Replacement string"))))
+
 (defvar textmate-import-convert-env-lst '()
   "List to convert Textmate Environmental variables to customizable fields.")
 (defun textmate-import-convert-template-t (begin-text max)
@@ -501,10 +570,8 @@ Possible choices are:
               (while (re-search-forward (nth 0 x) nil t)
                 (when (save-match-data (string-match "yas/getenv" (nth 1 x)))
                   (add-to-list 'textmate-import-convert-env-lst (match-string 1)))
-                (replace-match (nth 1 x) 't nil))
-              )
-            textmate-import-convert-known-expressions
-            )
+                (replace-match (nth 1 x) 't nil)))
+            textmate-import-convert-known-expressions)
       (goto-char (point-min))
       (setq max "0")
       (while (re-search-forward "[$][{]?\\([0-9]+\\)" nil t)
@@ -650,18 +717,14 @@ Possible choices are:
                           )
                         )
                     (error
-                     (message "[textmate-to-yas] Error Guessing mode: %s" (error-message-string error)))
-                    )
-                  )
-                )
-              tmp
-              )
+                     (message "[textmate-to-yas] Error Guessing mode: %s" (error-message-string error))))))
+              tmp)
         (unless possible-modes
-          (setq possible-modes (list (intern (completing-read (format "Emacs Mode (Textmate scope: %s): " scope-o) '()))))
-          )
+          (setq possible-modes (list (intern (completing-read (format "Emacs Mode (Textmate scope: %s): " scope-o) '())))))
         (add-to-list 'textmate-import-saved-guesses (list scope-o possible-modes))
         (message "Guessed the possible modes: %s" possible-modes)
         (symbol-value 'possible-modes)))))
+
 (defun textmate-import-current-buffer (new-dir &optional plist  buffer-name original-author mode-string-or-function   transform-function parent-modes ext)
   "* Changes Textmate (current buffer) plist to yas snippet."
   (let (
@@ -700,8 +763,9 @@ Possible choices are:
           (setq name (textmate-import-get-property "name" start stop))
           (setq scope (textmate-import-get-property "scope" start stop))
           (setq group (textmate-get-group uuid plist))
-          (setq binding (textmate-import-get-property "keyEquivalent" start stop))
-
+          (setq binding (if textmate-import-key-bindings
+                            (textmate-import-get-property "keyEquivalent" start stop)
+                          nil))
           (when binding
             ;; Need to convert bindings.
             (setq binding (downcase binding))
@@ -709,42 +773,10 @@ Possible choices are:
                     (let ((start 0) len)
                       (while (string-match (if (stringp (nth 0 x)) (nth 0 x) (string (nth 0 x))) binding start)
                         (setq len (length binding))
-                        (setq binding (replace-match (nth 1 x) t nil binding))
+                        (setq binding (replace-match (concat (nth 1 x) " ") t nil binding))
                         (setq start (+ (- (length binding) len) (match-end 0))))))
-                  '(
-                    ("&lt;" "<")        ;
-                    ("&gt;" ">")
-                    ("[@]\\(.\\)" "M-\\1")
-                    ("\\^\\(.\\)" "C-\\1")
-                    (?\C-a "C-a ")
-                    (?\C-b "C-b ")
-                    (?\C-c "C-c ")
-                    (?\C-d "C-d ")
-                    (?\C-e "C-e ")
-                    (?\C-f "C-f ")
-                    (?\C-g "C-g ")
-                    (?\C-h "C-h ")
-                    (?\C-i "C-i ")
-                    (?\C-j "C-j ")
-                    (?\C-k "C-k ")
-                    (?\C-l "C-l ")
-                    (?\C-m "C-m ")
-                    (?\C-n "C-n ")
-                    (?\C-o "C-o ")
-                    (?\C-p "C-p ")
-                    (?\C-q "C-q ")
-                    (?\C-r "C-r ")
-                    (?\C-s "C-s ")
-                    (?\C-t "C-t ")
-                    (?\C-u "C-u ")
-                    (?\C-v "C-v ")
-                    (?\C-w "C-w ")
-                    (?\C-x "C-x ")
-                    (?\C-y "C-y ")
-                    (?\C-z "C-z ")
-                    ))
-            (setq binding (concat "C-c C-y " binding))
-            )
+                  textmate-key-to-emacs-key-known)
+            (setq binding (concat textmate-default-key-prefix " " binding)))
           (setq snippet (textmate-import-convert-template content))
           ;; Get Environment
           (when (string-match "\\<yas/current-line\\>" snippet)
@@ -765,8 +797,7 @@ Possible choices are:
               (when (re-search-backward ")" nil t)
                 (insert "nil nil \"")
                 (insert (replace-regexp-in-string "\"" "\\\"" env 't 't))
-                (insert "\"")
-                )))
+                (insert "\""))))
           (setq snippet (concat "# -*- mode: snippet -*-"
                                 "\n# uuid: " uuid
                                 "\n# contributor: Translated from textmate snippet by textmate-import.el"
@@ -775,25 +806,21 @@ Possible choices are:
                                     (concat "\n# contributor: Original Author " original-author)
                                   "")
                                 (if (string= env "") ""
-                                  (concat "\n# expand-env : (" env ")")
-                                  )
+                                  (concat "\n# expand-env : (" env ")"))
                                 "\n# name: " name
                                 (if (not key)
                                     ""
-                                  (concat "\n# key: " key)
-                                  )
+                                  (concat "\n# key: " key))
                                 (if (not binding)
                                     ""
-                                  (concat "\n# binding:" binding)
-                                  )
+                                  (concat "\n# binding:" binding))
                                 "\n# scope: " scope
                                 type
                                 (if group
                                     (concat "\n# group: " group)
                                   "")
                                 "\n# --\n"
-                                snippet
-                                ))
+                                snippet))
           (when transform-function
             (setq snippet (apply transform-function (list snippet))))
           (cond
@@ -823,9 +850,9 @@ Possible choices are:
                         (insert parent-modes))))
                   (when (and textmate-import-convert-env-lst (> (length textmate-import-convert-env-lst) 0))
                     (let ( (fc "")
-                          (defg (format "(defgroup yas/%s nil \"%s snippet options\" :group 'yasnippet)" m  m))
-                          (defc (format "(defcustom yas/%senv/%%s nil \"%s environment variable %%s.  May be customized here instead of having the environment value specified.  This customization takes precedence over any environmental variable.\" :type 'string :group 'yas/%s)" m m m))
-                          )
+                           (defg (format "(defgroup yas/%s nil \"%s snippet options\" :group 'yasnippet)" m  m))
+                           (defc (format "(defcustom yas/%senv/%%s nil \"%s environment variable %%s.  May be customized here instead of having the environment value specified.  This customization takes precedence over any environmental variable.\" :type 'string :group 'yas/%s)" m m m))
+                           )
                       (when (file-exists-p (concat new-dir m "/.yas-setup.el"))
                         (setq fc (with-temp-buffer (insert-file-contents (concat new-dir m "/.yas-setup.el"))
                                                    (buffer-substring (point-min) (point-max)))))
@@ -869,9 +896,7 @@ Possible choices are:
 (defadvice dnd-open-file (around textmate-import-drag-and-drop activate)
   "* Drag Textmate git-hub tar.gz files to import into Yasnippet."
   (unless (textmate-import-drag-and-drop (ad-get-arg 0))
-    ad-do-it
-    )
-  )
+    ad-do-it))
 
 ;;;###autoload
 (defun textmate-import-git-tar.gz (file parent-modes)
@@ -908,8 +933,7 @@ Possible choices are:
                                  "-" (match-string 2 file) (match-string 3 file)
                                  (match-string 4 file) "/"))
           (message "textmate-import-bundle: %s %s %s" new-file parent-modes original-author)
-          (textmate-import-bundle new-file parent-modes original-author)
-          )))
+          (textmate-import-bundle new-file parent-modes original-author))))
     (cd temp-dir)
     (message "%s" (apply cmd (list (format "%s -rf %s" rm temp-dir))))))
 
@@ -929,81 +953,61 @@ Possible choices are:
       (setq new-dir (concat new-dir "/")))
     (when (file-exists-p (concat dir "info.plist"))
       (setq plist (with-temp-buffer (insert-file-contents (concat dir "info.plist"))
-                                    (buffer-substring (point-min) (point-max))))
-      )
+                                    (buffer-substring (point-min) (point-max)))))
     (setq snip-dir (concat dir "Snippets/"))
     (when (file-exists-p snip-dir)
       (setq snips (apply 'append (mapcar #'(lambda (ext)
-                                             (file-expand-wildcards (concat snip-dir "*." ext))
-                                             )
+                                             (file-expand-wildcards (concat snip-dir "*." ext)))
                                          (list
                                           "tmSnippet"
                                           "plist"
                                           "tmCommand"
-                                          "tmMacro")
-                                         )
-                         )
-            )
+                                          "tmMacro"))))
       (unless (not (file-exists-p new-dir))
         (mapc (lambda(x)
-                (textmate-import-file x new-dir mode original-author plist transform-function parent-modes)
-                )
-              snips
-              )
-        )
-      (message "Finished importing %s" dir)
-      )
-    )
-  )
+                (textmate-import-file x new-dir mode original-author plist transform-function parent-modes))
+              snips))
+      (message "Finished importing %s" dir))))
 (defun textmate-import-stata (dir &optional new-dir)
   "*Example function for importing Sata snippets into Yasnippet"
   (message "Importing Stata bundle dir %s" dir)
-  (textmate-import-bundle dir "text-mode" "Timothy Beatty" new-dir)
-  )
+  (textmate-import-bundle dir "text-mode" "Timothy Beatty" new-dir))
+
 (defun textmate-import-rmate (dir &optional new-dir)
   "* Example Function for importing Rmate into Yasnippet"
   (message "Importing Rmate Bundle dir %s" dir)
-  (textmate-import-bundle dir "text-mode" "Hans-Peter Suter" new-dir)
-  )
+  (textmate-import-bundle dir "text-mode" "Hans-Peter Suter" new-dir))
+
 (defvar textmate-import-svn-url "http://svn.textmate.org/trunk/Bundles/"
-  "* Url for Textmate svn"
-  )
+  "* Url for Textmate svn")
 (defvar textmate-import-svn-pkgs-cache nil
-  "* Cached list of Textmate svn bundles"
-  )
+  "* Cached list of Textmate svn bundles")
+
 (defun textmate-import-svn-get-pkgs ()
   "* Gets textmate bundles from svn"
   (if textmate-import-svn-pkgs-cache
       (symbol-value 'textmate-import-svn-pkgs-cache)
-    (let (
-          (buf (url-retrieve-synchronously textmate-import-svn-url))
-          (lst '())
-          )
+    (let ((buf (url-retrieve-synchronously textmate-import-svn-url))
+          (lst '()))
       (save-excursion
         (set-buffer buf)
         (goto-char (point-min))
         (while (re-search-forward "\"\\([%A-Z0-9_a-z]+\\)[.]tmbundle/\"" nil t)
           (add-to-list 'lst (match-string 1)))
-        (kill-buffer (current-buffer))
-        )
+        (kill-buffer (current-buffer)))
       (setq textmate-import-svn-pkgs-cache (mapcar (lambda(x) (replace-regexp-in-string "%20" " " x)) lst))
-      (symbol-value 'textmate-import-svn-pkgs-cache)
-      )
-    ))
+      (symbol-value 'textmate-import-svn-pkgs-cache))))
+
 (defun textmate-import-snippets-supported (textmate-url)
   "Check to see if snippets are supported"
-  (let (
-        (buf (url-retrieve-synchronously textmate-url))
-        (ret nil)
-        )
+  (let ((buf (url-retrieve-synchronously textmate-url))
+        (ret nil))
     (save-excursion
       (set-buffer buf)
       (goto-char (point-min))
       (setq ret (re-search-forward "\"Snippets/\"" nil t))
-      (kill-buffer (current-buffer))
-      )
-    )
-  )
+      (kill-buffer (current-buffer)))))
+
 (defun textmate-import-svn-snippets (snippet-url plist textmate-name)
   "*Imports snippets based on textmate svn tree."
   (message "Fetching %s" snippet-url)
@@ -1016,17 +1020,14 @@ Possible choices are:
                    (nth 0 yas/root-directory)
                    ))
         (default-buffer-file-coding-system 'utf-8)
-        (x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))
-        )
+        (x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
     (setq buf (url-retrieve-synchronously snippet-url))
     (save-excursion
       (set-buffer buf)
       (goto-char (point-min))
       (while (re-search-forward "\"\\([^\"]*[.]\\(?:tmSnippet\\|plist\\|tmCommand\\|tmMacro\\)\\)\"" nil 't)
-        (add-to-list 'snippets (match-string 1))
-        )
-      (kill-buffer (current-buffer))
-      )
+        (add-to-list 'snippets (match-string 1)))
+      (kill-buffer (current-buffer)))
     (while (string-match "[^A-Za-z0-9_.]+" ext)
       (setq ext (replace-match "_" 't 't ext)))
     (setq ext (concat "." ext))
@@ -1044,17 +1045,13 @@ Possible choices are:
                                               nil
                                               ext
                                               )
-              (kill-buffer (current-buffer))
-              )
+              (kill-buffer (current-buffer)))
             (message "Imported %s" (replace-regexp-in-string "%3c" "<"
                                                              (replace-regexp-in-string
                                                               "%20" " " x)))
-            (sleep-for 1)
-            )
+            (sleep-for 1))
           snippets)
-    (yas/reload-all)
-    )
-  )
+    (yas/reload-all)))
 ;;;###autoload
 (defun textmate-import-svn-from-url ()
   "* Imports a textmate bundle and extracts snippets from `textmate-import-svn-url'"
@@ -1072,38 +1069,28 @@ Possible choices are:
           (setq textmate-import-svn-pkgs-cache (remove-if
                                                 #'(lambda(x) (string= textmate-name x))
                                                 textmate-import-svn-pkgs-cache))
-          (error "This Textmate package has no snippets")
-          )
+          (error "This Textmate package has no snippets"))
       (message "Fetching %s" (concat textmate-url "info.plist"))
       (setq buf (url-retrieve-synchronously (concat textmate-url "info.plist")))
       (save-excursion
         (set-buffer buf)
         (setq plist (buffer-substring (point-min) (point-max)))
-        (kill-buffer (current-buffer))
-        )
+        (kill-buffer (current-buffer)))
       (sleep-for 1)
       (textmate-import-svn-snippets (concat textmate-url "Snippets/") plist textmate-name)
-      (message "Completed loading snippets from textmate package %s" textmate-name)
-      )
-    )
-  )
+      (message "Completed loading snippets from textmate package %s" textmate-name))))
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Snippet helper functions.
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun yas/getenv (var)
   "* Gets environment variable or customized variable for Textmate->Yasnippet conversion"
   (let (
-        (bvar (intern (format "yas/%s/env/%s" (or yas/mode-symbol major-mode) var)))
-        )
+        (bvar (intern (format "yas/%s/env/%s" (or yas/mode-symbol major-mode) var))))
     (if (boundp bvar)
         (if (symbol-value bvar)
             bvar
-          (getenv var)
-          )
-      (getenv var)
-      )
-    )
-  )
+          (getenv var))
+      (getenv var))))
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; macros for yas/replace-match
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1125,15 +1112,12 @@ Possible choices are:
         (ret2 (make-symbol "ret2"))
         (start (make-symbol "start"))
         (num (make-symbol "num"))
-        (mtch (make-symbol "mtch"))
-        )
-    `(let (
-           case-fold-search
+        (mtch (make-symbol "mtch")))
+    `(let (case-fold-search
            ,lst
            ,ret
            (,md (match-data))
-           ,md2
-           )
+           ,md2)
        (setq ,lst (split-string ,text ,(if downcase "\\\\L" "\\\\U") 't))
        (setq ,ret (pop ,lst))
        (setq ,ret (concat ,ret
@@ -1155,18 +1139,12 @@ Possible choices are:
                                  )
                                ;; Put extra \E values back in.
                                (setq ,ret2 (concat ,ret2 (mapconcat (lambda(y) y) ,lst2 "\\E")))
-                               (symbol-value ',ret2)
-                               )
-                             )
+                               (symbol-value ',ret2)))
                            ,lst
-                           ""
-                           )
-                          )
-             )
+                           "")))
        (set-match-data ,md)
-       (symbol-value ',ret)
-       )
-    ))
+       (symbol-value ',ret))))
+
 (defmacro yas/format-match-u (text &optional string downcase)
   "* Macro to replace \\u$1 (or \\l$1) with the correct expansion"
   (let (
@@ -1194,20 +1172,17 @@ Possible choices are:
          (setq ,ret (replace-match ,mtch 't 't ,ret))
          )
        (set-match-data ,md)
-       (symbol-value ',ret)
-       )
-    ))
+       (symbol-value ',ret))))
+
 (defun yas/format-match-?-buf (text &optional string empty-missing start-point stop-point)
   "* Recursive call to temporary buffer to replace conditional formats."
   ;; I don't believe recursive functions can be macros.
-  (let (
-        (start (or start-point (point-min)))
+  (let ((start (or start-point (point-min)))
         (stop (or stop-point (point-max)))
         insert other num
         (md (match-data))
         md2
-        p1 p2 p3
-        )
+        p1 p2 p3)
     (goto-char start)
     (while (re-search-forward "([?]\\([0-9]+\\)[:]" stop t)
       (setq p1 (match-beginning 0))
@@ -1235,32 +1210,21 @@ Possible choices are:
           (setq mtch other)
           )
         (set-match-data md2)
-        (replace-match mtch 't 't)
-        )
-      )
+        (replace-match mtch 't 't)))
     ;; Restore original match.
-    (set-match-data md)
-    )
-  )
+    (set-match-data md)))
+
 (defmacro yas/format-match-? (text &optional string empty-missing)
   "* Replaces conditional statements (?3:insertion:otherwise) or (?3:insertion).
 Also tries to handle nested conditional statements like (?1:$0:(?2:\\t$0))
 "
-  (let (
-        (ret (make-symbol "ret"))
-        )
-    `(let (
-           (,ret ,text)
-           )
+  (let ((ret (make-symbol "ret")))
+    `(let ((,ret ,text))
        (with-temp-buffer
          (insert ,ret)
          (yas/format-match-?-buf ,text ,string ,empty-missing)
-         (setq ,ret (buffer-substring-no-properties (point-min) (point-max)))
-         )
-       (symbol-value ',ret)
-       )
-    )
-  )
+         (setq ,ret (buffer-substring-no-properties (point-min) (point-max))))
+       (symbol-value ',ret))))
 (defmacro yas/format-match-$ (text &optional string)
   "* Replace $1 with the appropriate match."
   (let (
@@ -1285,12 +1249,10 @@ Also tries to handle nested conditional statements like (?1:$0:(?2:\\t$0))
          (setq ,start (+ (match-beginning 0) (length ,mtch)))
          (if ,mtch
              (setq ,ret (replace-match ,mtch 't 't ,ret))
-           (setq ,ret (replace-match "" t t ,ret)))
-         )
+           (setq ,ret (replace-match "" t t ,ret))))
        (set-match-data ,md)
-       (symbol-value ',ret)
-       )
-    ))
+       (symbol-value ',ret))))
+
 (defmacro yas/format-match (text &optional string treat-empty-matches-as-missing-matches)
   "* Use Textmate style format strings to replace match data."
   (let ((ret (make-symbol "ret")))
@@ -1319,35 +1281,34 @@ Also tries to handle nested conditional statements like (?1:$0:(?2:\\t$0))
         case-fold-search
         )
     (when (string-match "[iI]" option)
-            (setq case-fold-search 't) ;; Case insensitive search
-            )
-          (when (string-match "[sS]" option)
-            ;; Treat string as a single line.
-            )
-          (when (string-match "[mM]" option)
-            ;; Treat string as multiple lines.  Instead of matching ^ or $ to
-            ;; the beginning or ending of the string, it matches the
-            ;; beginning or ending of the line.
+      (setq case-fold-search 't) ;; Case insensitive search
+      )
+    (when (string-match "[sS]" option)
+      ;; Treat string as a single line.
+      )
+    (when (string-match "[mM]" option)
+      ;; Treat string as multiple lines.  Instead of matching ^ or $ to
+      ;; the beginning or ending of the string, it matches the
+      ;; beginning or ending of the line.
 
-            ;; In theory, the default behavior is to match the beginning and
-            ;; ending of the string.
-
-
-            ;; Currently this does NOTHING.
-            )
-          (cond
-           ( (string-match "[gG]" option) ;; Global replace
+      ;; In theory, the default behavior is to match the beginning and
+      ;; ending of the string.
+      
+      
+      ;; Currently this does NOTHING.
+      )
+    (cond
+     ( (string-match "[gG]" option) ;; Global replace
                                         ;       (esn-message "%s" reg)
-             (while (string-match reg ret start)
-               (setq mtch (yas/format-match textmate-rep ret))
+       (while (string-match reg ret start)
+         (setq mtch (yas/format-match textmate-rep ret))
                                         ;         (esn-message "Match String %s,%s" (match-string 0 ret) mtch)
-               (setq start (+ (match-beginning 0) (length mtch)))
-               (setq ret (replace-match mtch t t ret))))
-           ( 't ;; Replace first occurrence
-             (when (string-match reg ret)
-               (setq ret (yas/replace-match textmate-rep ret))
-               )))
-          (symbol-value 'ret)))
+         (setq start (+ (match-beginning 0) (length mtch)))
+         (setq ret (replace-match mtch t t ret))))
+     ( 't ;; Replace first occurrence
+       (when (string-match reg ret)
+         (setq ret (yas/replace-match textmate-rep ret)))))
+    (symbol-value 'ret)))
 ;;(message "%s" (yas/t/ "\\\\\\w+\\{(.*?)\\}|\\\\(.)|(\\w+)|([^\\w\\\\]+)" "(?4:_:\\L$1$2$3)" "g" "SUBSUBSECTION name"))
 ;;(message "%s" (yas/t/ "\\w+\\((.*)\\)|.*" "$1" "" "name(me)"))
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
