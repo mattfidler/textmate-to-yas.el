@@ -5,11 +5,11 @@
 ;; Author: Matthew L. Fidler
 ;; Maintainer: Matthew L. Fidler
 ;; Created: Wed Oct 20 15:08:50 2010 (-0500)
-;; Version: 0.14
-;; Last-Updated: Wed Jun 27 14:52:00 2012 (-0500)
+;; Version: 0.15
+;; Last-Updated: Fri Jun 29 10:31:21 2012 (-0500)
 ;;           By: Matthew L. Fidler
-;;     Update #: 1523
-;; URL: http://www.emacswiki.org/emacs/textmate-import.el
+;;     Update #: 1729
+;; URL: https://github.com/mlf176f2/textmate-to-yas.el/
 ;; Keywords: Yasnippet Textmate
 ;; Compatibility: Tested with Windows Emacs 23.2
 ;;
@@ -30,6 +30,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;; 29-Jun-2012    Matthew L. Fidler  
+;;    Last-Updated: Fri Jun 29 10:28:02 2012 (-0500) #1725 (Matthew L. Fidler)
+;;    Will not import Textmate snippets that cannot be translated to
+;;    emacs regular expressions.
+;; 29-Jun-2012    Matthew L. Fidler  
+;;    Last-Updated: Fri Jun 29 10:01:07 2012 (-0500) #1716 (Matthew L. Fidler)
+;;    Added yas/define-menu support. Should fix issue #2
 ;; 27-Jun-2012    Matthew L. Fidler  
 ;;    Last-Updated: Wed Jun 27 14:49:05 2012 (-0500) #1522 (Matthew L. Fidler)
 ;;    @capitaomorte suggested more customization.  Implemented.
@@ -203,7 +210,6 @@
 
 
 ;; Add $TM_COMMENT_START
-;; Add $TM_YEAR
 ;; Add $TM_ORGANIZATION_NAME
 
 
@@ -221,8 +227,8 @@
   :group 'yasnippet)
 
 
-(defcustom textmate-menu-definition 0
-  "* Defines the type of menu definition that is implemented:
+(defcustom textmate-use-define-menu t
+  "* Use `yas/define-menu' instead of placing 
 
 Possible choices are:
   Group -- Just use the group that the menu is located in.
@@ -300,6 +306,17 @@ C-c C-y M-a
           (list (sexp :tag "Texmate Key/Regular Expression for Key")
                 (string :tag "Emacs Replacement"))))
 
+(defmacro texmate-import-supported-snippet-p (snippet)
+  "Determines if the snippet is supported by emacs."
+  `(string-match (regexp-opt textmate-regexp-emacs-unsupported t) ,snippet ))
+
+(defcustom textmate-regexp-emacs-unsupported
+  '("(?=" "(?!" "(?<=" "(?<!" "(?>" "(?<" "(?'" "(?i" "(?m" "(?x"
+    "(?#")
+  "Emacs Unsupported Regular Expression"
+  :group 'textmate-import
+  :type '(repeat (string :tag "Textmate Expression")))
+
 (defcustom textmate-regexp-to-emacs-regexp-known
   '(;Textmate  Emacs
     ("\\A" "\\\`") ;; Beginning of String ->
@@ -326,15 +343,14 @@ C-c C-y M-a
   "Known Textmate to Emacs regular expression translations."
   :group 'textmate-import
   :type '(repeat
-          (list (regexp :tag "Textmate Expression")
+          (list (string :tag "Textmate Expression")
                 (string :tag "Emacs Expression"))))
 
 (defun textmate-regexp-to-emacs-regexp (rexp)
   "* Convert a textmate regular expression to an emacs regular expression (as much as possible)"
   (save-match-data
     (let (ret
-          case-fold-search
-          )
+          case-fold-search)
       (with-temp-buffer
         ;; Emacs http://www.gnu.org/software/emacs/manual/html_node/elisp/Syntax-of-Regexps.html#Syntax-of-Regexps
         ;; Textmate http://manual.macromates.com/en/drag_commands#drag_commands
@@ -357,11 +373,11 @@ C-c C-y M-a
         (goto-char (point-min))
         (while (re-search-forward "\\[\\^\\(.*?\\)\\\\\\([wsdh]\\)\\(.*?\\)\\]\\([+*?]*\\|{.*?}\\)" nil t)
           (replace-match (format "(?:\\\\%s\\4|[^\\1\\3]\\4)" (upcase (match-string 2)) 't)))
-
+        
         (goto-char (point-min))
         (while (re-search-forward "\\[\\^\\(.*?\\)\\\\\\([WSDH]\\)\\(.*?\\)\\]\\([+*?]*\\|{.*?}\\)" nil t)
           (replace-match (format "(?:\\\\%s\\4|[^\\1\\3]\\4)" (downcase (match-string 2)) 't)))
-
+        
         (goto-char (point-min))
         (while (re-search-forward "\\[\\^\\(.*?\\)\\\\\\([WSDHwsdh]\\)\\(.*?\\)\\]\\([+*?]*\\|{.*?}\\)" nil t)
           (replace-match "(?:\\\\\\2\\4|[^\\1\\3]\\4)" 't))
@@ -415,7 +431,7 @@ C-c C-y M-a
     ("[$][{]TM_SELECTED_TEXT[}]" "`(or yas/selected-text \"\")`")
     ("[$]TM_SELECTED_TEXT" "`(or yas/selected-text \"\")`")
     ;; See http://manual.macromates.com/en/environment_variables.html
-    
+    ("[$]TM_YEAR" "`(format-time-string \"%Y\")`")
     ("[$]TM_CURRENT_LINE" "`yas/current-line`")
     ("[$]TM_CURRENT_WORD" "`yas/current-word`")
     ("[$]TM_DIRECTORY" "`yas/current-dir`")
@@ -438,19 +454,17 @@ C-c C-y M-a
     ;; TM_DROPPED_FILE -- relative path of the file dropped (relative
     ;; to the document directory, which is also set as the current
     ;; directory).
-
+    
     ;; TM_DROPPED_FILEPATH -- the absolute path of the file dropped.
     
     ;; TM_MODIFIER_FLAGS -- the modifier keys which were held down
     ;; when the file got dropped. This is a bitwise OR in the form:
     ;; SHIFT|CONTROL|OPTION|COMMAND (in case all modifiers were down).
-
+    
     ("[$][{]\\([A-Za-z].*?\\):[$]TM_FULLNAME[}]" "`(or (yas/getenv \"\\1\") (user-full-name))`") ;
     
     ("[$][{]\\([A-Za-z].*?\\):[$]TM_CURRENT_LINE[}]" "`(or (yas/getenv \"\\1\") yas/current-line)`") ;
     ("[$][{]\\([A-Za-z].*?\\):[$]TM_CURRENT_WORD[}]" "`(or (yas/getenv \"\\1\") yas/current-word)`") ;
-    
-    
     ("[$]TM_FULLNAME" "`(user-full-name)`")
                                         ;    ("`date +[+]\\(.*?\\)`" "`(format-time-string \"\\1\")`")
     
@@ -467,6 +481,7 @@ C-c C-y M-a
 
 (defvar textmate-import-convert-env-lst '()
   "List to convert Textmate Environmental variables to customizable fields.")
+
 (defun textmate-import-convert-template-t (begin-text max)
   "* Subroutine to convert regular expressions to (yas/t expressions)"
   (let (
@@ -492,6 +507,7 @@ C-c C-y M-a
                 (symbol-value 'val)))
             lst " "))
     (insert ret)))
+
 (defun textmate-import-convert-template (template)
   "* Converts template to Yasnippet template"
   (let (ret max p1 not-found txt i lst tmp tmp0)
@@ -559,8 +575,7 @@ C-c C-y M-a
                        ( (string= "TM_FILEPATH" (match-string 1))
                          (insert " yas/current-path)`"))
                        ( (string= "TM_LINE_INDEX" (match-string 1))
-                         (insert " yas/current-column)`")
-                         )
+                         (insert " yas/current-column)`"))
                        ( 't
                          (insert (format " (or (yas/getenv \"%s\") \"\"))`" (match-string 1)))))
                       pt)))
@@ -595,7 +610,7 @@ C-c C-y M-a
         (setq i (+ i 1))
         )
       (unless (string= "(setq yas/t-lst (list " lst)
-        (setq lst (concat lst "))\n"))
+        (setq lst (concat lst "))\n"))  
         (goto-char (point-min))
         (insert "(yas/expand-snippet \"")
         (setq p1 (point))
@@ -617,6 +632,167 @@ C-c C-y M-a
         (replace-match "`\"}\"`"))
       (setq ret (buffer-substring (point-min) (point-max))))
     (symbol-value 'ret)))
+
+(defvar textmate-yas-known-uuid nil
+  "Known UUIDs for current import.")
+
+(defun textmate-yas-submenu (lst submenus space mode-name)
+  (let ((ret "")
+        submenu
+        tmp
+        (n-submenu 0)
+        (n-items 0)
+        (all-missing t)
+        (separator-useless t)
+        (last-comment nil)
+        (que-separator nil))
+    (mapc
+     (lambda(uuid)
+       (cond
+        ((member uuid (cadr (assoc mode-name textmate-yas-known-uuid)))
+         (when que-separator
+           (setq ret (concat ret "\n" space "(yas/separator)"))
+           (setq que-separator nil))
+         (setq ret (concat ret "\n" space "(yas/item " uuid ")"))
+         (setq separator-useless nil)
+         (setq last-comment nil)
+         (setq n-items (+ n-items 1)))
+        ((string-match "^-+$" uuid)
+         (unless separator-useless
+           (setq que-separator t)
+           (setq separator-useless t)))
+        ((progn (setq submenu (assoc uuid submenus)) submenu)
+         ;; Submenu Found
+         (setq tmp (textmate-yas-submenu (nth 2 submenu) submenus
+                                         (concat space (make-string 14 ? ))
+                                         mode-name))
+         (if (string= tmp "")
+             (progn
+               (concat ret "\n" space ";; Nothing matches submenu " (nth 1 submenu))
+               (setq last-comment t))
+           (when que-separator
+             (setq ret (concat ret "\n" space "(yas/separator)"))
+             (setq que-separator nil))
+           (with-temp-buffer
+             (insert tmp)
+             (goto-char (point-min))
+             (when (looking-at "\n *\\([(;]\\)")
+               (replace-match "\\1"))
+             (setq tmp (buffer-substring (point-min) (point-max))))
+           (setq ret (concat ret "\n" space "(yas/submenu \"" (nth 1 submenu) "\"\n" space "("
+                             tmp "))"))
+           (setq last-comment nil)
+           (setq n-submenu (+ n-submenu 1))))
+        (t
+         (setq ret (concat ret "\n" space
+                           ";; Could not figure out what to do with " uuid))
+         (setq last-comment t))))
+     lst)
+    (when last-comment
+      (setq ret (concat ret "\n" space "")))
+    (cond
+     ((and (= n-submenu 0) (= n-items 0)) ;; Nothing found.
+      (setq ret ""))
+     ((and (= n-submenu 1) (= n-items 0)) ;; Only one submenu.
+      (with-temp-buffer
+        (insert ret)
+        (goto-char (point-min))
+        (when (re-search-forward "(yas/submenu \"\\(.*?\\)\"[ \t\n]*(" nil t)
+          (replace-match (concat";; \\1 only has one submenu\n" space))
+          (goto-char (point-max))
+          (when (re-search-backward ")[ \t\n]*)" nil t)
+            (replace-match "")))
+        (setq ret (buffer-substring (point-min) (point-max))))))
+    (symbol-value 'ret)))
+
+(defun textmate-yas-menu-get-items (txt)
+  "Gets items from TXT and puts them into a list"
+  (let ((ret '()))
+    (with-temp-buffer
+      (insert txt)
+      (goto-char (point-min))
+      (while (re-search-forward "<string>\\([^-\n]+-[^-\n]+-[^-\n]+-[^-\n]+-[^-\n]+\\|-+\\)</string>" nil t)
+        (add-to-list 'ret (match-string 1))))
+    (symbol-value 'ret)))
+
+(defun textmate-yas-menu (plist &optional  mode-name)
+  "* Builds `yas/define-menu' from info.plist file"
+  (if mode-name
+      (let ((ret (concat ";; Translated Menu from textmate-to-yas.el\n(yas/define-menu '" mode-name "\n" (make-string 17 ? ) "'("))
+            p1 p2
+            main-menu
+            menu
+            items
+            name
+            ignore-items
+            (sub-menus '()))
+        (with-temp-buffer
+          (insert plist)
+          (goto-char (point-min))
+          (when (re-search-forward "<key>mainMenu</key>" nil t)
+            (setq p2 (point))
+            (when (re-search-forward "<key>items</key>" nil t)
+              (when (re-search-forward "<array>" nil t)
+                (setq p1 (point))
+                (when (re-search-forward "</array>" nil t)
+                  (setq main-menu (textmate-yas-menu-get-items (buffer-substring p1 (point))))
+                  (when (re-search-forward "<key>submenus</key>" nil t)
+                    (while (re-search-forward "<key>\\([^-\n]+-[^-\n]+-[^-\n]+-[^-\n]+-[^-\n]+\\)</key>" nil t)
+                      (setq uuid (match-string 1))
+                      (when (re-search-forward "<key>\\(items\\|name\\)</key>")
+                        (setq items "")
+                        (setq name "")
+                        ;; Get items and names
+                        (flet ((f ()
+                                  (if (string= "items" (match-string 1))
+                                      (when (re-search-forward "<array>" nil t)
+                                        (setq p1 (point))
+                                        (when (re-search-forward "</array>" nil t)
+                                          (setq items (textmate-yas-menu-get-items (buffer-substring p1 (point))))))
+                                    (when (re-search-forward "<string>\\(.*?\\)</string>" nil t)
+                                      (setq name (match-string 1))))))
+                          (f) (f))
+                        (add-to-list 'sub-menus `(,uuid ,name ,items))))
+                    (goto-char p2)
+                    (when (re-search-forward "<key>excludedItems</key>" nil t)
+                      (when (re-search-forward "<array>" nil t)
+                        (setq p1 (point))
+                        (when (re-search-forward "</array>" nil t)
+                          (setq ignore-items
+                                (concat "'("
+                                        (mapconcat
+                                         (lambda(x) x)
+                                         (textmate-yas-menu-get-items (buffer-substring p1 (point)))
+                                         " ") ")")))))))))))
+        (setq ret (concat ret  (textmate-yas-submenu main-menu sub-menus (make-string 19 ? ) mode-name) ")\n" (make-string 17 ? ) ignore-items  ")"))
+        (symbol-value 'ret))
+    ;; Setup directories
+    (mapc (lambda(x)
+            (let ((new-dir (if (eq (type-of 'yas/root-directory) 'symbol)
+                               (nth 0 yas/root-directory)
+                             yas/root-directory))
+                  (mode (nth 0 x))
+                  yas-setup
+                  fc
+                  (menu ""))
+              (setq yas-setup (expand-file-name ".yas-setup.el"
+                                                (expand-file-name mode new-dir)))
+              (setq fc "")
+              (when (file-readable-p yas-setup)
+                (setq fc (with-temp-buffer
+                           (insert-file-contents yas-setup)
+                           (buffer-substring (point-min) (point-max)))))
+              (with-temp-file yas-setup
+                (insert fc)
+                (goto-char (point-max))
+                (unless (search-backward "(require 'textmate-to-yas)" nil t)
+                  (insert "(require 'textmate-to-yas)\n"))
+                (insert (textmate-yas-menu plist mode))
+                (insert "\n")
+                (emacs-lisp-mode)
+                (indent-region (point-min) (point-max)))))
+          textmate-yas-known-uuid)))
+
 (defun textmate-get-group (uuid plist)
   "* Gets group from textmate info.plist file"
   (let (group start stop)
@@ -630,16 +806,14 @@ C-c C-y M-a
           (setq stop (point)))
         (setq group (textmate-import-get-property "name" start stop))))
     (symbol-value 'group)))
+
 (defun textmate-import-file (file new-dir &optional mode original-author plist transform-function parent-modes)
   "* Imports textmate file"
   (message "Importing %s " file)
-                                        ;(condition-case err
   (with-temp-buffer
     (insert-file-contents file)
-    (textmate-import-current-buffer new-dir plist file original-author mode transform-function parent-modes))
-                                        ;(error (message "textmate-import error while importing %s" file))
-                                        ;)
-  )
+    (textmate-import-current-buffer new-dir plist file original-author mode transform-function parent-modes)))
+
 (defun textmate-import-guess-possiblities (p-quote match-string)
   "* Guesses possible modes..."
   (add-to-list p-quote (intern (concat match-string "-mode")))
@@ -656,9 +830,7 @@ C-c C-y M-a
   (if (not scope)
       '(text-mode)
     (if (assoc scope-o textmate-import-saved-guesses)
-        (let (
-              (ret (nth 1 (assoc scope-o textmate-import-saved-guesses)))
-              )
+        (let ((ret (nth 1 (assoc scope-o textmate-import-saved-guesses))))
           (when (memq 'ess-mode ret)
             (when (string-match "# *scope: *.*" (symbol-value snippet-q))
               (set snippet-q
@@ -667,28 +839,20 @@ C-c C-y M-a
                      (match-string 0 (symbol-value snippet-q))
                      (format "\n# condition: (string= \"%s\" ess-language)"
                              (nth 1 (assoc scope-o textmate-import-saved-ess))))
-                    't 't (symbol-value snippet-q)
-                    )
-                   )
-              )
+                    't 't (symbol-value snippet-q))))
             ;; Take out any Ess keybindings.  They are hard to translate...
             (when (string-match "\n# *binding:.*" (symbol-value snippet-q))
-              (set snippet-q (replace-match "" 't 't (symbol-value snippet-q))))
-            )
-          (symbol-value 'ret)
-          )
+              (set snippet-q (replace-match "" 't 't (symbol-value snippet-q)))))
+          (symbol-value 'ret))
       (let (
             (possible-modes '())
             (tmp '())
-            (scope scope-o)
-            )
+            (scope scope-o))
         (when (string-match "\\([A-Za-z0-9]+\\)[.]tmbundle" scope)
-          (textmate-import-guess-possiblities 'possible-modes (match-string 1 scope))
-          )
+          (textmate-import-guess-possiblities 'possible-modes (match-string 1 scope)))
         (while (string-match "[.]\\([A-Za-z0-9]+\\)\\>" scope)
           (textmate-import-guess-possiblities 'possible-modes (match-string 1 scope))
-          (setq scope (replace-match "" nil nil scope))
-          )
+          (setq scope (replace-match "" nil nil scope)))
         (setq tmp (remove-if-not
                    #'(lambda(x) (fboundp x)) possible-modes))
         (setq possible-modes '())
@@ -707,15 +871,10 @@ C-c C-y M-a
                                   (concat
                                    (match-string 0 (symbol-value snippet-q))
                                    (format "\n# condition: (string= \"%s\" ess-language)" ess-language))
-                                  't 't (symbol-value snippet-q)
-                                  )
-                                 )
-                            )
+                                  't 't (symbol-value snippet-q))))
                           ;; Take out any Ess keybindings.  They are hard to translate...
                           (when (string-match "\n# *binding:.*" (symbol-value snippet-q))
-                            (set snippet-q (replace-match "" 't 't (symbol-value snippet-q))))
-                          )
-                        )
+                            (set snippet-q (replace-match "" 't 't (symbol-value snippet-q))))))
                     (error
                      (message "[textmate-to-yas] Error Guessing mode: %s" (error-message-string error))))))
               tmp)
@@ -724,6 +883,20 @@ C-c C-y M-a
         (add-to-list 'textmate-import-saved-guesses (list scope-o possible-modes))
         (message "Guessed the possible modes: %s" possible-modes)
         (symbol-value 'possible-modes)))))
+
+(defun textmate-import-add-to-alist (alist-var elt-cons &optional no-replace)
+  "Add to the value of ALIST-VAR an element ELT-CONS if it isn't there yet.
+If an element with the same car as the car of ELT-CONS is already present,
+replace it with ELT-CONS unless NO-REPLACE is non-nil; if a matching
+element is not already present, add ELT-CONS to the front of the alist.
+The test for presence of the car of ELT-CONS is done with `equal'."
+  (let (
+        (case-fold-search 't)
+        (existing-element (assoc (car elt-cons) (symbol-value alist-var))))
+    (if existing-element
+        (or no-replace
+            (rplacd existing-element (cdr elt-cons)))
+      (set alist-var (cons elt-cons (symbol-value alist-var))))))
 
 (defun textmate-import-current-buffer (new-dir &optional plist  buffer-name original-author mode-string-or-function   transform-function parent-modes ext)
   "* Changes Textmate (current buffer) plist to yas snippet."
@@ -744,6 +917,7 @@ C-c C-y M-a
         (binding "")
         (mode "")
         (env "")
+        (fc "")
         (bfn (or buffer-name (buffer-file-name)))
         (debug-on-error t)
         (yas (or ext ".yasnippet")))
@@ -777,103 +951,110 @@ C-c C-y M-a
                         (setq start (+ (- (length binding) len) (match-end 0))))))
                   textmate-key-to-emacs-key-known)
             (setq binding (concat textmate-default-key-prefix " " binding)))
-          (setq snippet (textmate-import-convert-template content))
-          ;; Get Environment
-          (when (string-match "\\<yas/current-line\\>" snippet)
-            (setq env (concat env " (yas/current-line (buffer-substring (point-at-bol) (point-at-eol))) ")))
-          (when (string-match "\\<yas/current-word\\>" snippet)
-            (setq env (concat env " (yas/current-word (buffer-substring (save-excursion (skip-syntax-backward \"w\") (point) (save-excursion (skip-syntax-forward \"w\") (point))) ")))
-          (when (string-match "\\<yas/current-dir\\>" snippet)
-            (setq env (concat env " (yas/current-dir (if (buffer-file-name) (file-name-directory (buffer-file-name)) \"\")) ")))
-          (when (string-match "\\<yas/current-path\\>" snippet)
-            (setq env (concat env " (yas/current-path (if (buffer-file-name) (buffer-file-name) \"\")) ")))
-          (when (string-match "\\<yas/current-column\\>" snippet)
-            (setq env (concat env " (yas/current-column (if (current-column) (current-column) \"\")) ")))
-          (when (string-match "(yas/expand-snippet" snippet)
-            (setq type "\n# type: command")
-            ;; Add environment to expand/snippet on command snippets.
-            (unless (string= "" env)
-              (goto-char (point-max))
-              (when (re-search-backward ")" nil t)
-                (insert "nil nil \"")
-                (insert (replace-regexp-in-string "\"" "\\\"" env 't 't))
-                (insert "\""))))
-          (setq snippet (concat "# -*- mode: snippet -*-"
-                                "\n# uuid: " uuid
-                                "\n# contributor: Translated from textmate snippet by textmate-import.el"
-                                "\n# contributor: Imported by " (user-full-name)
-                                (if original-author
-                                    (concat "\n# contributor: Original Author " original-author)
-                                  "")
-                                (if (string= env "") ""
-                                  (concat "\n# expand-env : (" env ")"))
-                                "\n# name: " name
-                                (if (not key)
-                                    ""
-                                  (concat "\n# key: " key))
-                                (if (not binding)
-                                    ""
-                                  (concat "\n# binding:" binding))
-                                "\n# scope: " scope
-                                type
-                                (if group
-                                    (concat "\n# group: " group)
-                                  "")
-                                "\n# --\n"
-                                snippet))
-          (when transform-function
-            (setq snippet (apply transform-function (list snippet))))
-          (cond
-           ( (functionp mode-string-or-function)
-             (setq mode (list (funcall mode-string-or-function snippet))))
-           ( (stringp mode-string-or-function)
-             (setq mode (list mode-string-or-function)))
-           ( 't
-             (setq mode (mapcar (lambda(x) (format "%s" x)) (textmate-import-guess-mode scope 'snippet)))))
-          ;; (setq new-dir (concat new-dir mode))
-          (mapc (lambda(m)
-                  (unless (string= m "")
-                    (setq m (concat m "/")))
-                  (when (not (file-exists-p (concat new-dir m)))
-                    (make-directory (concat new-dir m) 't))
-                  (with-temp-file (concat new-dir m "/" bfn)
-                    (set-buffer-file-coding-system 'raw-text)
-                    (insert snippet)
-                    (goto-char (point-min))
-                    (when (re-search-forward "# *scope:.*\n" nil t)
-                      (replace-match "")))
-                  (if (not parent-modes)
-                      (setq parent-modes "text-mode"))
-                  (when (and parent-modes (not (string= parent-modes "")))
-                    (unless (file-exists-p (concat new-dir m "/.yas-parents"))
-                      (with-temp-file (concat new-dir m "/.yas-parents")
-                        (insert parent-modes))))
-                  (when (and textmate-import-convert-env-lst (> (length textmate-import-convert-env-lst) 0))
-                    (let ( (fc "")
-                           (defg (format "(defgroup yas/%s nil \"%s snippet options\" :group 'yasnippet)" m  m))
-                           (defc (format "(defcustom yas/%senv/%%s nil \"%s environment variable %%s.  May be customized here instead of having the environment value specified.  This customization takes precedence over any environmental variable.\" :type 'string :group 'yas/%s)" m m m))
-                           )
-                      (when (file-exists-p (concat new-dir m "/.yas-setup.el"))
-                        (setq fc (with-temp-buffer (insert-file-contents (concat new-dir m "/.yas-setup.el"))
-                                                   (buffer-substring (point-min) (point-max)))))
-                      (with-temp-file (concat new-dir m "/.yas-setup.el")
-                        (insert fc)
-                        (goto-char (point-max))
-                        (unless (search-backward "(require 'textmate-to-yas)" nil t)
-                          (insert "(require 'textmate-to-yas)\n")
-                          )
-                        (goto-char (point-max))
-                        (unless (search-backward defg nil t)
-                          (insert defg)
-                          (insert "\n"))
-                        (mapc (lambda(txt)
-                                (goto-char (point-max))
-                                (unless (search-backward (format defc txt txt) nil t)
-                                  (insert (format defc txt txt))
-                                  (insert "\n")))
-                              textmate-import-convert-env-lst)))))
-                mode)
-          (setq textmate-import-convert-env-lst '()))))))
+          (if (not (texmate-import-supported-snippet-p content))
+              (progn
+                (message "Snippet %s cannot be imported because it has Textmate specific features that have no equivalent in emacs" name))
+            (setq snippet (textmate-import-convert-template content))
+            ;; Get Environment
+            (when (string-match "\\<yas/current-line\\>" snippet)
+              (setq env (concat env " (yas/current-line (buffer-substring (point-at-bol) (point-at-eol))) ")))
+            (when (string-match "\\<yas/current-word\\>" snippet)
+              (setq env (concat env " (yas/current-word (buffer-substring (save-excursion (skip-syntax-backward \"w\") (point) (save-excursion (skip-syntax-forward \"w\") (point))) ")))
+            (when (string-match "\\<yas/current-dir\\>" snippet)
+              (setq env (concat env " (yas/current-dir (if (buffer-file-name) (file-name-directory (buffer-file-name)) \"\")) ")))
+            (when (string-match "\\<yas/current-path\\>" snippet)
+              (setq env (concat env " (yas/current-path (if (buffer-file-name) (buffer-file-name) \"\")) ")))
+            (when (string-match "\\<yas/current-column\\>" snippet)
+              (setq env (concat env " (yas/current-column (if (current-column) (current-column) \"\")) ")))
+            (when (string-match "(yas/expand-snippet" snippet)
+              (setq type "\n# type: command")
+              ;; Add environment to expand/snippet on command snippets.
+              (unless (string= "" env)
+                (goto-char (point-max))
+                (when (re-search-backward ")" nil t)
+                  (insert "nil nil \"")
+                  (insert (replace-regexp-in-string "\"" "\\\"" env 't 't))
+                  (insert "\""))))
+            (setq snippet (concat "# -*- mode: snippet -*-"
+                                  "\n# uuid: " uuid
+                                  "\n# contributor: Translated from textmate snippet by textmate-import.el"
+                                  "\n# contributor: Imported by " (user-full-name)
+                                  (if original-author
+                                      (concat "\n# contributor: Original Author " original-author)
+                                    "")
+                                  (if (string= env "") ""
+                                    (concat "\n# expand-env : (" env ")"))
+                                  "\n# name: " name
+                                  (if (not key)
+                                      ""
+                                    (concat "\n# key: " key))
+                                  (if (not binding)
+                                      ""
+                                    (concat "\n# binding:" binding))
+                                  "\n# scope: " scope
+                                  type
+                                  (if (and group (not textmate-use-define-menu))
+                                      (concat "\n# group: " group)
+                                    "")
+                                  "\n# --\n"
+                                  snippet))
+            (when transform-function
+              (setq snippet (apply transform-function (list snippet))))
+            (cond
+             ( (functionp mode-string-or-function)
+               (setq mode (list (funcall mode-string-or-function snippet))))
+             ( (stringp mode-string-or-function)
+               (setq mode (list mode-string-or-function)))
+             ( 't
+               (setq mode (mapcar (lambda(x) (format "%s" x)) (textmate-import-guess-mode scope 'snippet)))))
+            ;; (setq new-dir (concat new-dir mode))
+            (mapc (lambda(m)
+                    (textmate-import-add-to-alist
+                     'textmate-yas-known-uuid
+                     `(,m ,(append (list uuid)
+                                   (cadr (assoc m textmate-yas-known-uuid)))))
+                    (unless (string= m "")
+                      (setq m (concat m "/")))
+                    (when (not (file-exists-p (concat new-dir "/" m)))
+                      (make-directory (concat new-dir "/" m) 't))
+                    (with-temp-file (concat new-dir "/" m "/" bfn)
+                      (set-buffer-file-coding-system 'raw-text)
+                      (insert snippet)
+                      (goto-char (point-min))
+                      (when (re-search-forward "# *scope:.*\n" nil t)
+                        (replace-match "")))
+                    (if (not parent-modes)
+                        (setq parent-modes "text-mode"))
+                    (when (and parent-modes (not (string= parent-modes "")))
+                      (unless (file-exists-p (concat new-dir "/" m ".yas-parents"))
+                        (with-temp-file (concat new-dir "/" m ".yas-parents")
+                          (insert parent-modes))))
+                    
+                    (when (and textmate-import-convert-env-lst (> (length textmate-import-convert-env-lst) 0))
+                      (let ( (fc "")
+                             (defg (format "(defgroup yas/%s nil \"%s snippet options\" :group 'yasnippet)" (substring m 0 -1)  (substring m 0 -1)))
+                             (defc (format "(defcustom yas/%senv/%%s nil \"%s environment variable %%s.  May be customized here instead of having the environment value specified.  This customization takes precedence over any environmental variable.\"\n  :type 'string\n  :group 'yas/%s)\n" (substring m 0 -1) (substring m 0 -1) (substring m 0 -1))))
+                        (setq fc "")
+                        (when (file-exists-p (concat new-dir "/" m ".yas-setup.el"))
+                          (setq fc (with-temp-buffer (insert-file-contents (concat new-dir "/" m "/.yas-setup.el"))
+                                                     (buffer-substring (point-min) (point-max)))))
+                        (with-temp-file (concat new-dir "/" m ".yas-setup.el")
+                          (insert fc)
+                          (goto-char (point-max))
+                          (unless (search-backward "(require 'textmate-to-yas)" nil t)
+                            (insert "(require 'textmate-to-yas)\n"))
+                          (goto-char (point-max))
+                          (unless (search-backward defg nil t)
+                            (insert defg)
+                            (insert "\n"))
+                          (mapc (lambda(txt)
+                                  (goto-char (point-max))
+                                  (unless (search-backward (format defc txt txt) nil t)
+                                    (insert (format defc txt txt))
+                                    (insert "\n")))
+                                textmate-import-convert-env-lst)))))
+                  mode)
+            (setq textmate-import-convert-env-lst '())))))))
 
 ;;;###autoload
 (defun textmate-import-drag-and-drop (uri &rest ignore)
@@ -902,6 +1083,8 @@ C-c C-y M-a
 (defun textmate-import-git-tar.gz (file parent-modes)
   "* Imports a TextMate git-hub bundle."
   (interactive "fTextmate GIThub .tar.gz file: \nsParent Modes: ")
+  (setq textmate-yas-known-uuid nil)
+  (setq textmate-import-convert-env-lst nil)
   (let (original-author
         (gz (executable-find "gzip"))
         (tar (executable-find "tar"))
@@ -941,32 +1124,40 @@ C-c C-y M-a
 (defun textmate-import-bundle (dir parent-modes &optional original-author yas-dir mode transform-function)
   "Imports textmate bundle to new-dir.  Mode may be a string or a function determining which mode to place files in..."
   (interactive "fTextmate Bundle Directory: \nsParent Modes: ")
-  (setq textmate-import-convert-env-lst '())
-  (setq dir (file-name-directory dir))
-  (unless (string= "/" (substring dir -1))
-    (setq dir (concat dir "/")))
-  (let (snip-dir snips plist (new-dir (if (eq (type-of 'yas/root-directory) 'symbol)
-                                          yas/root-directory
-                                        (nth 0 yas/root-directory))))
+  (setq textmate-yas-known-uuid nil)
+  (setq textmate-import-convert-env-lst nil)
+  (let ((new-dir (if (eq (type-of 'yas/root-directory) 'symbol)
+                     (nth 0 yas/root-directory)
+                   yas/root-directory))
+        snip-dir snips plist)
+    
     (unless (or (string= (substring new-dir -1) "/")
                 (string= (substring new-dir -1) "\\"))
       (setq new-dir (concat new-dir "/")))
-    (when (file-exists-p (concat dir "info.plist"))
-      (setq plist (with-temp-buffer (insert-file-contents (concat dir "info.plist"))
+    (message "Snippet Output Directory %s" new-dir)
+    (when (file-exists-p (expand-file-name "info.plist" dir))
+      (setq plist (with-temp-buffer (insert-file-contents (expand-file-name "info.plist" dir))
                                     (buffer-substring (point-min) (point-max)))))
-    (setq snip-dir (concat dir "Snippets/"))
+    (setq snip-dir (expand-file-name "Snippets" dir))
+    (message "Snippet Dir located in: %s" snip-dir)
     (when (file-exists-p snip-dir)
-      (setq snips (apply 'append (mapcar #'(lambda (ext)
-                                             (file-expand-wildcards (concat snip-dir "*." ext)))
-                                         (list
-                                          "tmSnippet"
-                                          "plist"
-                                          "tmCommand"
-                                          "tmMacro"))))
+      (let ((default-directory snip-dir))
+        (setq snips
+              (apply 'append
+                     (mapcar #'(lambda (ext)
+                                 (file-expand-wildcards (concat "*." ext) t))
+                             (list
+                              "tmSnippet"
+                              "plist"
+                              "tmCommand"
+                              "tmMacro")))))
+      (message "Snippets: %s" snips)
       (unless (not (file-exists-p new-dir))
         (mapc (lambda(x)
                 (textmate-import-file x new-dir mode original-author plist transform-function parent-modes))
               snips))
+      (when textmate-use-define-menu
+        (textmate-yas-menu plist))
       (message "Finished importing %s" dir))))
 (defun textmate-import-stata (dir &optional new-dir)
   "*Example function for importing Sata snippets into Yasnippet"
@@ -1011,14 +1202,14 @@ C-c C-y M-a
 (defun textmate-import-svn-snippets (snippet-url plist textmate-name)
   "*Imports snippets based on textmate svn tree."
   (message "Fetching %s" snippet-url)
-  (let (
-        (ext textmate-name)
+  (setq textmate-yas-known-uuid nil)
+  (setq textmate-import-convert-env-lst nil)
+  (let ((ext textmate-name)
         buf
         (snippets '())
         (new-dir (if (eq (type-of 'yas/root-directory) 'symbol)
-                     yas/root-directory
-                   (nth 0 yas/root-directory)
-                   ))
+                     (nth 0 yas/root-directory)
+                   yas/root-directory))
         (default-buffer-file-coding-system 'utf-8)
         (x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
     (setq buf (url-retrieve-synchronously snippet-url))
@@ -1051,6 +1242,8 @@ C-c C-y M-a
                                                               "%20" " " x)))
             (sleep-for 1))
           snippets)
+    (when textmate-use-define-menu
+      (textmate-yas-menu plist))
     (yas/reload-all)))
 ;;;###autoload
 (defun textmate-import-svn-from-url ()
@@ -1101,6 +1294,7 @@ C-c C-y M-a
        (concat (,(if downcase 'downcase 'upcase) (substring (match-string ,match-number ,string) 0 1))
                (substring (match-string ,match-number ,string) 1))
      (upcase (match-string ,match-number ,string))))
+
 (defmacro yas/format-match-UE (text &optional string downcase)
   "* Helper macro to emulate Textmate case folding in replacement that is \\U\\E and \\U\\L"
   (let (
@@ -1271,15 +1465,13 @@ Also tries to handle nested conditional statements like (?1:$0:(?2:\\t$0))
 
 (defun yas/t/ (textmate-reg textmate-rep &optional textmate-option t-text)
   "* Textmate like mirror.  Uses textmate regular expression and textmate formatting."
-  (let (
-        (option (or textmate-option ""))
+  (let ((option (or textmate-option ""))
         (ret (or t-text yas/text ""))
         (start 0)
         (fix "")
         (reg (textmate-regexp-to-emacs-regexp textmate-reg))
         mtch
-        case-fold-search
-        )
+        case-fold-search)
     (when (string-match "[iI]" option)
       (setq case-fold-search 't) ;; Case insensitive search
       )
@@ -1290,7 +1482,7 @@ Also tries to handle nested conditional statements like (?1:$0:(?2:\\t$0))
       ;; Treat string as multiple lines.  Instead of matching ^ or $ to
       ;; the beginning or ending of the string, it matches the
       ;; beginning or ending of the line.
-
+      
       ;; In theory, the default behavior is to match the beginning and
       ;; ending of the string.
       
@@ -1332,8 +1524,9 @@ Also tries to handle nested conditional statements like (?1:$0:(?2:\\t$0))
               (yas/update-mirrors snippet))))
       (insert default-text)
       (let ((snippet (car (yas/snippets-at-point))))
-	(when snippet
-	  (yas/update-mirrors snippet)))))))
+        (when snippet
+          (yas/update-mirrors snippet)))))))
+
 (defalias 'yas/ma 'yas/text-on-moving-away)
 (defalias 'yas/emld 'yas/text-on-moving-away)
 
@@ -1351,11 +1544,10 @@ Also tries to handle nested conditional statements like (?1:$0:(?2:\\t$0))
          (active-field-pos (position active-field live-fields)))
     (= active-field-pos arg)))
 
-
 (defvar yas/t-lst '()
   "Variable for expanding textmate transformations with Yasnippet")
 
-;;(textmate-import-rmate "c:/tmp/swissr-rmate.tmbundle-v0.4.2-0-g7d026da/swissr-rmate.tmbundle-7d026da/")
+;;(textmate-import-bundle "C:/tmp/rmate/swissr-rmate.tmbundle-7d026da" "text-mode")
                                         ;(textmate-import-stata "c:/tmp/Stata.tmbundle/")
                                         ;(setq debug-on-error 't)
                                         ;(setq debug-on-quit 't)
@@ -1363,5 +1555,6 @@ Also tries to handle nested conditional statements like (?1:$0:(?2:\\t$0))
 
 
 ;;https://github.com/subtleGradient/javascript-tools.tmbundle
+(provide 'textmate-to-yas)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; textmate-to-yas.el ends here

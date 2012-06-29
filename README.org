@@ -13,3 +13,35 @@ the following in ~/.emacs
 
 If you wish to use a snippet from GitHub, just drag the .tar.gz
 file to emacs while Yasnippet is running
+
+Notes about importing:
+ - Importing depends on what emacs knows about your system.  If a =.R=
+   file is opened in =ess-mode=, then it is imported to =ess-mode= snippets.
+   Similarly if an =.Rd= file is associated to =Rd-mode=, then it is
+   imported to =Rd-mode=.  Hence bundles like
+   https://github.com/swissr/rmate.tmbundle will import to two
+   different snippet directories.
+
+ - The translations depend on implementing Textmate regular
+   expressions in emacs, as =textmate-to-yas= needs to be sourced for
+   translated snippets since it implements condition insertions syntax
+   of Textmated based on a emacs regular expression. (See
+   http://manual.macromates.com/en/regular_expressions#conditional_insertions.html)
+
+ - Textmate regular expressions has features that emacs regular
+   expressions do not have, for example:
+
+   - look-ahead
+   - negative look-ahead
+   - look-behind
+   - negative look-behind
+
+   These regular expressions are not supported in emacs and cannot be
+   translated to yasnippet programatically.  Currently they will be
+   ignored.  You may wish to implement  an elisp solution yourself.
+* Importing A Textmate bundle from the Textmate SVN url
+This is done with the command =textmate-import-svn-from-url=.
+* Importing from an unzipped Textmate tmBundle
+This is done with the command =textmate-import-bundle=.  You need to
+specify both the root directory of the bundle ant the parent modes for
+importing (like text-mode).
