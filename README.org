@@ -23,7 +23,7 @@ Notes about importing:
    different snippet directories.
 
  - The translations depend on implementing Textmate regular
-   expressions in emacs, as =textmate-to-yas= needs to be sourced for
+   expressions in emacs.  Therefore, =textmate-to-yas= needs to be sourced for
    translated snippets since it implements condition insertions syntax
    of Textmated based on a emacs regular expression. (See
    http://manual.macromates.com/en/regular_expressions#conditional_insertions.html)
@@ -44,7 +44,7 @@ Notes about importing:
    - Under a mac =plutil= is used to convert binary to xml formats.
    - Under other operating systems =plutil.pl= is used to convert
      binary to xml formats.  Therefore this requires perl to be
-     installed.
+     installed for binary conversion.
 * Importing A Textmate bundle from the Textmate SVN url
 This is done with the command =textmate-import-svn-from-url=.
 * Importing from an unzipped Textmate tmBundle
