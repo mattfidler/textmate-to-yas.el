@@ -6,9 +6,9 @@
 ;; Maintainer: Matthew L. Fidler
 ;; Created: Wed Oct 20 15:08:50 2010 (-0500)
 ;; Version: 0.15
-;; Last-Updated: Fri Jun 29 10:31:21 2012 (-0500)
+;; Last-Updated: Fri Jun 29 12:22:42 2012 (-0500)
 ;;           By: Matthew L. Fidler
-;;     Update #: 1729
+;;     Update #: 1747
 ;; URL: https://github.com/mlf176f2/textmate-to-yas.el/
 ;; Keywords: Yasnippet Textmate
 ;; Compatibility: Tested with Windows Emacs 23.2
@@ -30,6 +30,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;; 29-Jun-2012    Matthew L. Fidler  
+;;    Last-Updated: Fri Jun 29 12:14:15 2012 (-0500) #1742 (Matthew L. Fidler)
+;;    Should convert binary plists with either perl and plutil.pl or
+;;    Mac OSX and plutil
 ;; 29-Jun-2012    Matthew L. Fidler  
 ;;    Last-Updated: Fri Jun 29 10:28:02 2012 (-0500) #1725 (Matthew L. Fidler)
 ;;    Will not import Textmate snippets that cannot be translated to
@@ -228,12 +232,16 @@
 
 
 (defcustom textmate-use-define-menu t
-  "* Use `yas/define-menu' instead of placing 
+  "* Use `yas/define-menu' instead of placing the menu choice in the group tag."
+  :type 'boolean
+  :group 'textmate-import)
 
-Possible choices are:
-  Group -- Just use the group that the menu is located in.
-  define -- Define using (yas/define-menu).  Currently unimplemented.
-"
+(defcustom textmate-import-plutil.pl
+  (concat (file-name-directory (or
+                                load-file-name
+                                buffer-file-name)) "plutil.pl")
+  "plutil.pl path to deal with binary plists."
+  :type 'file
   :group 'textmate-import)
 
 (if (not (boundp 'yas/root-directory))
@@ -306,7 +314,7 @@ C-c C-y M-a
           (list (sexp :tag "Texmate Key/Regular Expression for Key")
                 (string :tag "Emacs Replacement"))))
 
-(defmacro texmate-import-supported-snippet-p (snippet)
+(defmacro texmate-import-unsupported-snippet-p (snippet)
   "Determines if the snippet is supported by emacs."
   `(string-match (regexp-opt textmate-regexp-emacs-unsupported t) ,snippet ))
 
@@ -807,12 +815,42 @@ C-c C-y M-a
         (setq group (textmate-import-get-property "name" start stop))))
     (symbol-value 'group)))
 
+(defun textmate-import-convert-to-xml (file)
+  "Converts a binary plist to XML"
+  (cond
+   ((and (eq system-type 'darwin)
+         (executable-find "plutil"))
+    (message "%s" (shell-command-to-string (concat "plutil -convert xml1 " file)))
+    file)
+   ((and (executable-find "perl")
+         (file-readable-p textmate-import-plutil.pl))
+    (message "%s" (shell-command-to-string (concat "perl " textmate-import-plutil.pl " " file)))
+    (if (file-exists-p (concat file ".text"))
+        (progn
+          (delete-file file)
+          (rename-file (concat file ".text") file))
+      (let ((plist file))
+        (when (string-match ".plist" plist)
+          (setq plist (replace-match ".text.plist" t t plist)))
+        (unless (string= file plist)
+          (delete-file file)
+          (rename-file plist file)))))))
+
 (defun textmate-import-file (file new-dir &optional mode original-author plist transform-function parent-modes)
   "* Imports textmate file"
   (message "Importing %s " file)
   (with-temp-buffer
     (insert-file-contents file)
-    (textmate-import-current-buffer new-dir plist file original-author mode transform-function parent-modes)))
+    (goto-char (point-min))
+    (unless (re-search-forward "<\\?xml" nil t)
+      (message "%s is in binary format, attempting to convert!" file)
+      (delete-region (point-min) (point-max))
+      (textmate-import-convert-to-xml file)
+      (insert-file-contents file))
+    (goto-char (point-min))
+    (if (re-search-forward "<\\?xml" nil t)
+        (textmate-import-current-buffer new-dir plist file original-author mode transform-function parent-modes)
+      (message "Binary file conversion failed, cannot import %s" file))))
 
 (defun textmate-import-guess-possiblities (p-quote match-string)
   "* Guesses possible modes..."
@@ -951,7 +989,7 @@ The test for presence of the car of ELT-CONS is done with `equal'."
                         (setq start (+ (- (length binding) len) (match-end 0))))))
                   textmate-key-to-emacs-key-known)
             (setq binding (concat textmate-default-key-prefix " " binding)))
-          (if (not (texmate-import-supported-snippet-p content))
+          (if (texmate-import-unsupported-snippet-p content)
               (progn
                 (message "Snippet %s cannot be imported because it has Textmate specific features that have no equivalent in emacs" name))
             (setq snippet (textmate-import-convert-template content))
@@ -1136,29 +1174,41 @@ The test for presence of the car of ELT-CONS is done with `equal'."
       (setq new-dir (concat new-dir "/")))
     (message "Snippet Output Directory %s" new-dir)
     (when (file-exists-p (expand-file-name "info.plist" dir))
-      (setq plist (with-temp-buffer (insert-file-contents (expand-file-name "info.plist" dir))
-                                    (buffer-substring (point-min) (point-max)))))
-    (setq snip-dir (expand-file-name "Snippets" dir))
-    (message "Snippet Dir located in: %s" snip-dir)
-    (when (file-exists-p snip-dir)
-      (let ((default-directory snip-dir))
-        (setq snips
-              (apply 'append
-                     (mapcar #'(lambda (ext)
-                                 (file-expand-wildcards (concat "*." ext) t))
-                             (list
-                              "tmSnippet"
-                              "plist"
-                              "tmCommand"
-                              "tmMacro")))))
-      (message "Snippets: %s" snips)
-      (unless (not (file-exists-p new-dir))
-        (mapc (lambda(x)
-                (textmate-import-file x new-dir mode original-author plist transform-function parent-modes))
-              snips))
-      (when textmate-use-define-menu
-        (textmate-yas-menu plist))
-      (message "Finished importing %s" dir))))
+      (setq plist (with-temp-buffer
+                    (insert-file-contents (expand-file-name "info.plist" dir))
+                    (goto-char (point-min))
+                    (unless (re-search-forward "<\\?xml" nil t)
+                      (message "info.plist is in binary format, attempting to convert!")
+                      (delete-region (point-min) (point-max))
+                      (textmate-import-convert-to-xml (expand-file-name "info.plist" dir))
+                      (insert-file-contents (expand-file-name "info.plist" dir)))
+                    (goto-char (point-min))
+                    (if (re-search-forward "<\\?xml" nil t)
+                        (buffer-substring (point-min) (point-max))
+                      nil))))
+    (if (not plist)
+        (message "Cannot convert binary plist, aborting snippet import.")
+      (setq snip-dir (expand-file-name "Snippets" dir))
+      (message "Snippet Dir located in: %s" snip-dir)
+      (when (file-exists-p snip-dir)
+        (let ((default-directory snip-dir))
+          (setq snips
+                (apply 'append
+                       (mapcar #'(lambda (ext)
+                                   (file-expand-wildcards (concat "*." ext) t))
+                               (list
+                                "tmSnippet"
+                                "plist"
+                                "tmCommand"
+                                "tmMacro")))))
+        (message "Snippets: %s" snips)
+        (unless (not (file-exists-p new-dir))
+          (mapc (lambda(x)
+                  (textmate-import-file x new-dir mode original-author plist transform-function parent-modes))
+                snips))
+        (when textmate-use-define-menu
+          (textmate-yas-menu plist))
+        (message "Finished importing %s" dir)))))
 (defun textmate-import-stata (dir &optional new-dir)
   "*Example function for importing Sata snippets into Yasnippet"
   (message "Importing Stata bundle dir %s" dir)
@@ -1186,7 +1236,8 @@ The test for presence of the car of ELT-CONS is done with `equal'."
         (while (re-search-forward "\"\\([%A-Z0-9_a-z]+\\)[.]tmbundle/\"" nil t)
           (add-to-list 'lst (match-string 1)))
         (kill-buffer (current-buffer)))
-      (setq textmate-import-svn-pkgs-cache (mapcar (lambda(x) (replace-regexp-in-string "%20" " " x)) lst))
+      (setq textmate-import-svn-pkgs-cache
+            (mapcar (lambda(x) (replace-regexp-in-string "%20" " " x)) lst))
       (symbol-value 'textmate-import-svn-pkgs-cache))))
 
 (defun textmate-import-snippets-supported (textmate-url)
@@ -1227,15 +1278,26 @@ The test for presence of the car of ELT-CONS is done with `equal'."
             (setq buf (url-retrieve-synchronously (concat snippet-url x)))
             (save-excursion
               (set-buffer buf)
-              (textmate-import-current-buffer new-dir plist
-                                              (replace-regexp-in-string "%3c" "<"
-                                                                        (replace-regexp-in-string "%20" " " x))
-                                              nil
-                                              nil
-                                              nil
-                                              nil
-                                              ext
-                                              )
+              (goto-char (point-min))
+              (unless (re-search-forward "<\\?xml" nil t)
+                (message "This is in binary format. Attempting to convert.")
+                (let ((tmp-file (make-temp-file "textmate-to-yas-convert-")))
+                  (write-file tmp-file)
+                  (textmate-import-convert-to-xml tmp-file)
+                  (delete-region (point-min) (point-max))
+                  (insert-file-contents tmp-file)
+                  (delete-file tmp-file)))
+              (goto-char (point-min))
+              (if (re-search-forward "<\\?xml" nil t)
+                  (textmate-import-current-buffer new-dir plist
+                                                  (replace-regexp-in-string "%3c" "<"
+                                                                            (replace-regexp-in-string "%20" " " x))
+                                                  nil
+                                                  nil
+                                                  nil
+                                                  nil
+                                                  ext)
+                (message "Error converting to xml format."))
               (kill-buffer (current-buffer)))
             (message "Imported %s" (replace-regexp-in-string "%3c" "<"
                                                              (replace-regexp-in-string
@@ -1267,10 +1329,24 @@ The test for presence of the car of ELT-CONS is done with `equal'."
       (setq buf (url-retrieve-synchronously (concat textmate-url "info.plist")))
       (save-excursion
         (set-buffer buf)
-        (setq plist (buffer-substring (point-min) (point-max)))
+        (goto-char (point-min))
+        (unless (re-search-forward "<\\?xml" nil t)
+          (message "This is in binary format. Attempting to convert.")
+          (let ((tmp-file (make-temp-file "textmate-to-yas-convert-")))
+            (write-file tmp-file)
+            (textmate-import-convert-to-xml tmp-file)
+            (delete-region (point-min) (point-max))
+            (insert-file-contents tmp-file)
+            (delete-file tmp-file)))
+        (goto-char (point-min))
+        (if (re-search-forward "<\\?xml" nil t)
+            (setq plist (buffer-substring (point-min) (point-max)))
+          (message "Cannot convert info.plist to xml; Aborting snippet import.")
+          (setq plist nil))
         (kill-buffer (current-buffer)))
       (sleep-for 1)
-      (textmate-import-svn-snippets (concat textmate-url "Snippets/") plist textmate-name)
+      (when plist
+        (textmate-import-svn-snippets (concat textmate-url "Snippets/") plist textmate-name))
       (message "Completed loading snippets from textmate package %s" textmate-name))))
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Snippet helper functions.

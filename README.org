@@ -39,6 +39,12 @@ Notes about importing:
    These regular expressions are not supported in emacs and cannot be
    translated to yasnippet programatically.  Currently they will be
    ignored.  You may wish to implement  an elisp solution yourself.
+
+ - Binary plists are partially supported with command line tools:
+   - Under a mac =plutil= is used to convert binary to xml formats.
+   - Under other operating systems =plutil.pl= is used to convert
+     binary to xml formats.  Therefore this requires perl to be
+     installed.
 * Importing A Textmate bundle from the Textmate SVN url
 This is done with the command =textmate-import-svn-from-url=.
 * Importing from an unzipped Textmate tmBundle
