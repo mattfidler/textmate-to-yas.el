@@ -1,0 +1,5 @@
+(:name textmate-to-yas
+ :description "textmate-to-yas"
+ :website "https://github.com/mlf176f2/textmate-to-yas.el"
+ :type git
+ :url "https://github.com/mlf176f2/textmate-to-yas.el.git")
