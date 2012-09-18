@@ -13,7 +13,7 @@
 
 @node Import Textmate bundles into Emacs using lisp
 @chapter Import Textmate bundles into Emacs using lisp
-Matthew L. Fidler ## Library Information @strong{textmate-to-yas.el} --- Import Textmate macros into yasnippet syntax
+Matthew L. Fidler ## Library Information @emph{textmate-to-yas.el} --- Import Textmate macros into yasnippet syntax
 
 @itemize
 @item
@@ -27,7 +27,7 @@ Matthew L. Fidler ## Library Information @strong{textmate-to-yas.el} --- Import 
 @item
 @strong{Created} -- Wed Oct 20 15:08:50 2010 (-0500)
 @item
-@strong{Version} -- 0.15
+@strong{Version} -- 0.16
 @item
 @strong{Last-Updated} -- Fri Jun 29 12:22:42 2012 (-0500)
 @item
@@ -42,46 +42,17 @@ Matthew L. Fidler ## Library Information @strong{textmate-to-yas.el} --- Import 
 @strong{Compatibility} -- Tested with Windows Emacs 23.2
 @end itemize
 
-This library allows you to import TextMate bundle snippets to Yasnippet
+@menu
+* Importing A Textmate bundle from the Textmate SVN url::
+@end menu
 
-To use@comma{} put in a directory in the load path@comma{} like ~/elisp and put the following in ~/.emacs
-
-(require 'textmate-to-yas)
-
-If you wish to use a snippet from GitHub@comma{} just drag the .tar.gz file to emacs while Yasnippet is running
-
-Notes about importing: - Importing depends on what emacs knows about your system. If a @code{.R} file is opened in @code{ess-mode}@comma{} then it is imported to @code{ess-mode} snippets. Similarly if an @code{.Rd} file is associated to @code{Rd-mode}@comma{} then it is imported to @code{Rd-mode}. Hence bundles like https:__github.com_swissr_rmate.tmbundle will import to two different snippet directories.
+@node Importing A Textmate bundle from the Textmate SVN url
+@section Importing A Textmate bundle from the Textmate SVN url
+This is done with the command @code{textmate-import-svn-from-url}. ## Importing from an unzipped Textmate tmBundle This is done with the command @code{textmate-import-bundle}. You need to specify both the root directory of the bundle ant the parent modes for importing (like text-mode). ## History
 
 @itemize
 @item
-The translations depend on implementing Textmate regular expressions in emacs. Therefore@comma{} @code{textmate-to-yas} needs to be sourced for translated snippets since it implements condition insertions syntax of Textmated based on a emacs regular expression. (See http:__manual.macromates.com_en_regular
-expressions#conditional
-insertions.html)
-
-@item
-Textmate regular expressions has features that emacs regular expressions do not have@comma{} for example:
-
-@item
-look-ahead
-@item
-negative look-ahead
-@item
-look-behind
-@item
-negative look-behind
-
-@end itemize
-
-These regular expressions are not supported in emacs and cannot be translated to yasnippet programatically. Currently they will be ignored. You may wish to implement an elisp solution yourself.
-
-@itemize
-@item
-Binary plists are partially supported with command line tools:
-@item
-Under a mac @code{plutil} is used to convert binary to xml formats.
-@item
-Under other operating systems @code{plutil.pl} is used to convert binary to xml formats. Therefore this requires perl to be installed for binary conversion. ## Importing A Textmate bundle from the Textmate SVN url This is done with the command @code{textmate-import-svn-from-url}. ## Importing from an unzipped Textmate tmBundle This is done with the command @code{textmate-import-bundle}. You need to specify both the root directory of the bundle ant the parent modes for importing (like text-mode). ## History
-
+@strong{18-Sep-2012} -- Backward compatibility update. ()
 @item
 @strong{12-Sep-2012} -- First attempt to support 0.8x. Currently untested. ()
 @item
@@ -174,7 +145,6 @@ Under other operating systems @code{plutil.pl} is used to convert binary to xml 
 @strong{21-Oct-2010} -- Added a yas/root-directory of the current directory if undefined. Allows to be run from the command line by just loading this file (Matthew L. Fidler)
 @item
 @strong{21-Oct-2010} -- 20-Oct-2010 Matthew L. Fidler Bug fix -- added mode. (Matthew L. Fidler)
-
 @end itemize
 
 @bye
