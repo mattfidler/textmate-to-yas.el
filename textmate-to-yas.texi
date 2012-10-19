@@ -27,7 +27,7 @@ Matthew L. Fidler ## Library Information @emph{textmate-to-yas.el} --- Import Te
 @item
 @strong{Created} -- Wed Oct 20 15:08:50 2010 (-0500)
 @item
-@strong{Version} -- 0.16
+@strong{Version} -- 0.17
 @item
 @strong{Last-Updated} -- Fri Jun 29 12:22:42 2012 (-0500)
 @item
@@ -44,17 +44,103 @@ Matthew L. Fidler ## Library Information @emph{textmate-to-yas.el} --- Import Te
 
 @menu
 * Importing A Textmate bundle from the Textmate SVN url::
+* Imports snippets based on textmate svn tree::
 @end menu
 
 @node Importing A Textmate bundle from the Textmate SVN url
 @section Importing A Textmate bundle from the Textmate SVN url
-This is done with the command @code{textmate-import-svn-from-url}. ## Importing from an unzipped Textmate tmBundle This is done with the command @code{textmate-import-bundle}. You need to specify both the root directory of the bundle ant the parent modes for importing (like text-mode). ## History
+This is done with the command @code{textmate-import-svn-from-url}. ## Importing from an unzipped Textmate tmBundle This is done with the command @code{textmate-import-bundle}. You need to specify both the root directory of the bundle ant the parent modes for importing (like text-mode). ## Example function for importing Sata snippets into Yasnippet
+
+@node textmate-import-svn-get-pkgs
+@subsubsection textmate-import-svn-get-pkgs
+@code{(textmate-import-svn-get-pkgs)}
 
 @itemize
 @item
-@strong{18-Sep-2012} -- Backward compatibility update. ()
+Gets textmate bundles from svn
+@end itemize
+
+@node textmate-import-svn-snippets
+@subsubsection textmate-import-svn-snippets
+@code{(textmate-import-svn-snippets SNIPPET-URL PLIST TEXTMATE-NAME)}
+
+@node Imports snippets based on textmate svn tree
+@section Imports snippets based on textmate svn tree.
+
+@node textmate-regexp-to-emacs-regexp
+@subsubsection textmate-regexp-to-emacs-regexp
+@code{(textmate-regexp-to-emacs-regexp REXP)}
+
+@itemize
 @item
-@strong{12-Sep-2012} -- First attempt to support 0.8x. Currently untested. ()
+Convert a textmate regular expression to an emacs regular expression (as much as possible)
+@end itemize
+
+@node textmate-yas-menu
+@subsubsection textmate-yas-menu
+@code{(textmate-yas-menu PLIST &optional MODE-NAME)}
+
+@itemize
+@item
+Builds @code{yas-define-menu}from info.plist file
+@end itemize
+
+@node textmate-yas-menu-get-items
+@subsubsection textmate-yas-menu-get-items
+@code{(textmate-yas-menu-get-items TXT)}
+
+Gets items from TXT and puts them into a list
+
+@node yas---t/
+@subsubsection yas---t/
+@code{(yas---t/ TEXTMATE-REG TEXTMATE-REP &optional TEXTMATE-OPTION T-TEXT)}
+
+@itemize
+@item
+Textmate like mirror. Uses textmate regular expression and textmate formatting.
+@end itemize
+
+@node yas-format-match-?-buf
+@subsubsection yas-format-match-?-buf
+=(yas-format-match-?-buf TEXT &optional STRING EMPTY-MISSING START-POINT STOP-POINT)=
+
+@itemize
+@item
+Recursive call to temporary buffer to replace conditional formats.
+@end itemize
+
+@node yas-getenv
+@subsubsection yas-getenv
+@code{(yas-getenv VAR)}
+
+@itemize
+@item
+Gets environment variable or customized variable for Textmate->Yasnippet conversion
+@end itemize
+
+@node yas-replace-match
+@subsubsection yas-replace-match
+=(yas-replace-match TEXT &optional STRING TREAT-EMPTY-MATCHES-AS-MISSING-MATCHES SUBEXP)=
+
+@itemize
+@item
+yas-replace-match is similar to emacs replace-match but using Textmate formats
+@end itemize
+
+@node yas-text-on-moving-away
+@subsubsection yas-text-on-moving-away
+@code{(yas-text-on-moving-away DEFAULT-TEXT)}
+
+@itemize
+@item
+Changes text when moving away AND original text has not changed ## History
+
+@item
+@strong{18-Oct-2012} -- Bug fix for yasnippet backward compatibility. (Matthew L. Fidler)
+@item
+@strong{18-Sep-2012} -- Backward compatibility update. (Matthew L. Fidler)
+@item
+@strong{12-Sep-2012} -- First attempt to support 0.8x. Currently untested. (Matthew L. Fidler)
 @item
 @strong{29-Jun-2012} -- Should convert binary plists with either perl and plutil.pl or Mac OSX and plutil (Matthew L. Fidler)
 @item
@@ -102,7 +188,13 @@ This is done with the command @code{textmate-import-svn-from-url}. ## Importing 
 @item
 @strong{05-Nov-2010} -- Textmate import file handles errors gracefully. (Matthew L. Fidler)
 @item
-@strong{05-Nov-2010} -- Added better textmate support by providing translations for mirrors. Requires the directive # type: command available in the SVN version of yasnippet. (Matthew L. Fidler) 05-Nov-2010 Last-Updated: Fri Nov 5 09:59:30 2010 (-0500) #898 (US041375) Changed textmate-replace-in-string with replace-regexp-in-string 04-Nov-2010 Last-Updated: Thu Nov 4 12:38:32 2010 (-0500) #535 (us041375) Changed extension from .yasnippet to what the package is in a svn-import. 04-Nov-2010 Last-Updated: Thu Nov 4 10:55:27 2010 (-0500) #525 (us041375) replace-in-string changed to textmate-replace-in-string. May be missing on some systems.
+@strong{05-Nov-2010} -- Added better textmate support by providing translations for mirrors. Requires the directive # type: command available in the SVN version of yasnippet. (Matthew L. Fidler)
+@item
+@strong{05-Nov-2010} -- Changed textmate-replace-in-string with replace-regexp-in-string (US041375)
+@item
+@strong{04-Nov-2010} -- Changed extension from .yasnippet to what the package is in a svn-import. (us041375)
+@item
+@strong{04-Nov-2010} -- replace-in-string changed to textmate-replace-in-string. May be missing on some systems. (us041375)
 @item
 @strong{01-Nov-2010} -- Bug fix for expand-env (Matthew L. Fidler)
 @item
@@ -145,6 +237,7 @@ This is done with the command @code{textmate-import-svn-from-url}. ## Importing 
 @strong{21-Oct-2010} -- Added a yas/root-directory of the current directory if undefined. Allows to be run from the command line by just loading this file (Matthew L. Fidler)
 @item
 @strong{21-Oct-2010} -- 20-Oct-2010 Matthew L. Fidler Bug fix -- added mode. (Matthew L. Fidler)
+
 @end itemize
 
 @bye
