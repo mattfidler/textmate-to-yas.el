@@ -1,4 +1,4 @@
 (textmate-to-yas
  :repo "mlf176f2/textmate-to-yas.el"
  :fetcher github
- :files ("textmate-to-yas.el"))
+ :files ("textmate-to-yas.el" "dir" "textmate-to-yas.info"))

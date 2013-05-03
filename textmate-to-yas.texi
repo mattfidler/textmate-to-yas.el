@@ -1,5 +1,10 @@
 \input texinfo
 @documentencoding UTF-8
+@dircategory Emacs lisp libraries
+@direntry
+* textmate-to-yas: (textmate-to-yas).     Import Textmate macros into yasnippet syntax
+@end direntry
+
 
 @ifnottex
 @paragraphindent 0
@@ -27,7 +32,7 @@ Matthew L. Fidler ## Library Information @emph{textmate-to-yas.el} --- Import Te
 @item
 @strong{Created} -- Wed Oct 20 15:08:50 2010 (-0500)
 @item
-@strong{Version} -- 0.17
+@strong{Version} -- 0.20
 @item
 @strong{Last-Updated} -- Fri Jun 29 12:22:42 2012 (-0500)
 @item
@@ -134,110 +139,8 @@ yas-replace-match is similar to emacs replace-match but using Textmate formats
 @itemize
 @item
 Changes text when moving away AND original text has not changed ## History
-
-@item
-@strong{18-Oct-2012} -- Bug fix for yasnippet backward compatibility. (Matthew L. Fidler)
-@item
-@strong{18-Sep-2012} -- Backward compatibility update. (Matthew L. Fidler)
-@item
-@strong{12-Sep-2012} -- First attempt to support 0.8x. Currently untested. (Matthew L. Fidler)
-@item
-@strong{29-Jun-2012} -- Should convert binary plists with either perl and plutil.pl or Mac OSX and plutil (Matthew L. Fidler)
-@item
-@strong{29-Jun-2012} -- Will not import Textmate snippets that cannot be translated to emacs regular expressions. (Matthew L. Fidler)
-@item
-@strong{29-Jun-2012} -- Added yas/define-menu support. Should fix issue #2 (Matthew L. Fidler)
-@item
-@strong{27-Jun-2012} -- @@capitaomorte suggested more customization. Implemented. (Matthew L. Fidler)
-@item
-@strong{27-Jun-2012} -- Added the ability to transform bundle specific transformations (Matthew L. Fidler)
-@item
-@strong{22-Nov-2011} -- Another small fix for quoted parenthesis @} (Matthew L. Fidler)
-@item
-@strong{22-Nov-2011} -- Added a fix for Textmate imports to avoid yasnippet bug. See: https:__github.com_capitaomorte_yasnippet_issues_197 (Matthew L. Fidler)
-@item
-@strong{21-Nov-2011} -- Tested with bsd-tar on windows and changed some extraction behaviors. (Matthew L. Fidler)
-@item
-@strong{01-Apr-2011} -- Changed @code{yas/ma} so that it applies the mirrors upon moving away. (Matthew L. Fidler)
-@item
-@strong{31-Mar-2011} -- Add @code{yas/editing-field-num-p} (Matthew L. Fidler)
-@item
-@strong{08-Feb-2011} -- Added autoload cookies. (Matthew L. Fidler)
-@item
-@strong{28-Nov-2010} -- Bug-fix for names. (Matthew L. Fidler)
-@item
-@strong{28-Nov-2010} -- bug fix for yas_t_ when $1 doesn't exist. (Matthew L. Fidler)
-@item
-@strong{12-Nov-2010} -- Added #bindings back. (Matthew L. Fidler)
-@item
-@strong{10-Nov-2010} -- Bug fix to Textmate to Emacs regular expression matching. (Matthew L. Fidler)
-@item
-@strong{09-Nov-2010} -- Added error fix for TextMate formats (upper and lower case when match isn't found.) (Matthew L. Fidler)
-@item
-@strong{09-Nov-2010} -- Bug fix for complicated yas_t_ snippets not converting the @ character to \. (Matthew L. Fidler)
-@item
-@strong{09-Nov-2010} -- yas_t_ bugfix for missing text. (Matthew L. Fidler)
-@item
-@strong{09-Nov-2010} -- Added error handler when guessing modes. (Matthew L. Fidler)
-@item
-@strong{09-Nov-2010} -- Added drag and drop support for Github tar.gz files. Requires Yasnippet to be running. (Matthew L. Fidler)
-@item
-@strong{06-Nov-2010} -- Changed name. (Matthew L. Fidler)
-@item
-@strong{06-Nov-2010} -- Handle nested conditional replacements. For example (?3:one:(?2:two:none)) (Matthew L. Fidler)
-@item
-@strong{05-Nov-2010} -- Textmate import file handles errors gracefully. (Matthew L. Fidler)
-@item
-@strong{05-Nov-2010} -- Added better textmate support by providing translations for mirrors. Requires the directive # type: command available in the SVN version of yasnippet. (Matthew L. Fidler)
-@item
-@strong{05-Nov-2010} -- Changed textmate-replace-in-string with replace-regexp-in-string (US041375)
-@item
-@strong{04-Nov-2010} -- Changed extension from .yasnippet to what the package is in a svn-import. (us041375)
-@item
-@strong{04-Nov-2010} -- replace-in-string changed to textmate-replace-in-string. May be missing on some systems. (us041375)
-@item
-@strong{01-Nov-2010} -- Bug fix for expand-env (Matthew L. Fidler)
-@item
-@strong{01-Nov-2010} -- Added more supported tags. (Matthew L. Fidler)
-@item
-@strong{01-Nov-2010} -- Took out #scope pseudo-directive. (Matthew L. Fidler)
-@item
-@strong{01-Nov-2010} -- Added more file extensions. (Matthew L. Fidler)
-@item
-@strong{28-Oct-2010} -- Removed bindings. They are currently causing problems... (Matthew L. Fidler)
-@item
-@strong{28-Oct-2010} -- Added completed import of svn bundle message. (Matthew L. Fidler)
-@item
-@strong{28-Oct-2010} -- Bug fix to allow files to be .yasnippet instead of _yasnippet files. (Matthew L. Fidler)
-@item
-@strong{27-Oct-2010} -- Added fix to allow files to pass for directories in @code{textmate-import-bundle} (Matthew L. Fidler)
-@item
-@strong{27-Oct-2010} -- Added import from svn.textmate.org using url package. Use @code{textmate-import-svn-url} (Matthew L. Fidler)
-@item
-@strong{27-Oct-2010} -- Added a guess-mode function to take out prompting for modes. (Matthew L. Fidler)
-@item
-@strong{25-Oct-2010} -- Bug fix for .yas-parents. (Matthew L. Fidler)
-@item
-@strong{25-Oct-2010} -- Changed import rmate and stata to mirror new textmate-import function (Matthew L. Fidler)
-@item
-@strong{25-Oct-2010} -- Changed parent-mode to a prompt and uses .yas-parents as in SVN trunk of yasnippet. (Matthew L. Fidler)
-@item
-@strong{22-Oct-2010} -- Bugfix for $@{1:default@} expressions (Matthew L. Fidler)
-@item
-@strong{22-Oct-2010} -- Added ability to choose mode by function or mode-name (Matthew L. Fidler)
-@item
-@strong{21-Oct-2010} -- Selected text bugfix (Matthew L. Fidler)
-@item
-@strong{21-Oct-2010} -- Now handles key-bindings as well. (Matthew L. Fidler)
-@item
-@strong{21-Oct-2010} -- Added a fix to take out spaces in textmate bundles file name translations. (Matthew L. Fidler)
-@item
-@strong{21-Oct-2010} -- Updated import to find groupings before or after orderings in the info.plist. (Matthew L. Fidler)
-@item
-@strong{21-Oct-2010} -- Added a yas/root-directory of the current directory if undefined. Allows to be run from the command line by just loading this file (Matthew L. Fidler)
-@item
-@strong{21-Oct-2010} -- 20-Oct-2010 Matthew L. Fidler Bug fix -- added mode. (Matthew L. Fidler)
-
 @end itemize
+
+3-May-2013 Matthew L. Fidler@* Last-Updated: Fri Jun 29 12:22:42 2012 (-0500) #1747 (Matthew L. Fidler) Better fix for requiring 'textmate-to-yas in Emacs 24+. It should download textmate-to-yas if it isn't present. 3-May-2013 Matthew L. Fidler@* Last-Updated: Fri Jun 29 12:22:42 2012 (-0500) #1747 (Matthew L. Fidler) Added textmate-to-yas automatic package installation for emacs 24 - @strong{18-Oct-2012} -- Bug fix for yasnippet backward compatibility. (Matthew L. Fidler) - @strong{18-Sep-2012} -- Backward compatibility update. (Matthew L. Fidler) - @strong{12-Sep-2012} -- First attempt to support 0.8x. Currently untested. (Matthew L. Fidler) - @strong{29-Jun-2012} -- Should convert binary plists with either perl and plutil.pl or Mac OSX and plutil (Matthew L. Fidler) - @strong{29-Jun-2012} -- Will not import Textmate snippets that cannot be translated to emacs regular expressions. (Matthew L. Fidler) - @strong{29-Jun-2012} -- Added yas/define-menu support. Should fix issue #2 (Matthew L. Fidler) - @strong{27-Jun-2012} -- @@capitaomorte suggested more customization. Implemented. (Matthew L. Fidler) - @strong{27-Jun-2012} -- Added the ability to transform bundle specific transformations (Matthew L. Fidler) - @strong{22-Nov-2011} -- Another small fix for quoted parenthesis @} (Matthew L. Fidler) - @strong{22-Nov-2011} -- Added a fix for Textmate imports to avoid yasnippet bug. See: https:@emph{@emph{github.com_capitaomorte_yasnippet_issues_197 (Matthew L. Fidler) - @strong{21-Nov-2011} -- Tested with bsd-tar on windows and changed some extraction behaviors. (Matthew L. Fidler) - @strong{01-Apr-2011} -- Changed @code{yas/ma} so that it applies the mirrors upon moving away. (Matthew L. Fidler) - @strong{31-Mar-2011} -- Add @code{yas/editing-field-num-p} (Matthew L. Fidler) - @strong{08-Feb-2011} -- Added autoload cookies. (Matthew L. Fidler) - @strong{28-Nov-2010} -- Bug-fix for names. (Matthew L. Fidler) - @strong{28-Nov-2010} -- bug fix for yas_t} when $1 doesn't exist. (Matthew L. Fidler) - @strong{12-Nov-2010} -- Added #bindings back. (Matthew L. Fidler) - @strong{10-Nov-2010} -- Bug fix to Textmate to Emacs regular expression matching. (Matthew L. Fidler) - @strong{09-Nov-2010} -- Added error fix for TextMate formats (upper and lower case when match isn't found.) (Matthew L. Fidler) - @strong{09-Nov-2010} -- Bug fix for complicated yas_t} snippets not converting the @ character to \. (Matthew L. Fidler) - @strong{09-Nov-2010} -- yas_t_ bugfix for missing text. (Matthew L. Fidler) - @strong{09-Nov-2010} -- Added error handler when guessing modes. (Matthew L. Fidler) - @strong{09-Nov-2010} -- Added drag and drop support for Github tar.gz files. Requires Yasnippet to be running. (Matthew L. Fidler) - @strong{06-Nov-2010} -- Changed name. (Matthew L. Fidler) - @strong{06-Nov-2010} -- Handle nested conditional replacements. For example (?3:one:(?2:two:none)) (Matthew L. Fidler) - @strong{05-Nov-2010} -- Textmate import file handles errors gracefully. (Matthew L. Fidler) - @strong{05-Nov-2010} -- Added better textmate support by providing translations for mirrors. Requires the directive # type: command available in the SVN version of yasnippet. (Matthew L. Fidler) - @strong{05-Nov-2010} -- Changed textmate-replace-in-string with replace-regexp-in-string (US041375) - @strong{04-Nov-2010} -- Changed extension from .yasnippet to what the package is in a svn-import. (us041375) - @strong{04-Nov-2010} -- replace-in-string changed to textmate-replace-in-string. May be missing on some systems. (us041375) - @strong{01-Nov-2010} -- Bug fix for expand-env (Matthew L. Fidler) - @strong{01-Nov-2010} -- Added more supported tags. (Matthew L. Fidler) - @strong{01-Nov-2010} -- Took out #scope pseudo-directive. (Matthew L. Fidler) - @strong{01-Nov-2010} -- Added more file extensions. (Matthew L. Fidler) - @strong{28-Oct-2010} -- Removed bindings. They are currently causing problems... (Matthew L. Fidler) - @strong{28-Oct-2010} -- Added completed import of svn bundle message. (Matthew L. Fidler) - @strong{28-Oct-2010} -- Bug fix to allow files to be .yasnippet instead of _yasnippet files. (Matthew L. Fidler) - @strong{27-Oct-2010} -- Added fix to allow files to pass for directories in @code{textmate-import-bundle} (Matthew L. Fidler) - @strong{27-Oct-2010} -- Added import from svn.textmate.org using url package. Use @code{textmate-import-svn-url} (Matthew L. Fidler) - @strong{27-Oct-2010} -- Added a guess-mode function to take out prompting for modes. (Matthew L. Fidler) - @strong{25-Oct-2010} -- Bug fix for .yas-parents. (Matthew L. Fidler) - @strong{25-Oct-2010} -- Changed import rmate and stata to mirror new textmate-import function (Matthew L. Fidler) - @strong{25-Oct-2010} -- Changed parent-mode to a prompt and uses .yas-parents as in SVN trunk of yasnippet. (Matthew L. Fidler) - @strong{22-Oct-2010} -- Bugfix for $@{1:default@} expressions (Matthew L. Fidler) - @strong{22-Oct-2010} -- Added ability to choose mode by function or mode-name (Matthew L. Fidler) - @strong{21-Oct-2010} -- Selected text bugfix (Matthew L. Fidler) - @strong{21-Oct-2010} -- Now handles key-bindings as well. (Matthew L. Fidler) - @strong{21-Oct-2010} -- Added a fix to take out spaces in textmate bundles file name translations. (Matthew L. Fidler) - @strong{21-Oct-2010} -- Updated import to find groupings before or after orderings in the info.plist. (Matthew L. Fidler) - @strong{21-Oct-2010} -- Added a yas/root-directory of the current directory if undefined. Allows to be run from the command line by just loading this file (Matthew L. Fidler) - @strong{21-Oct-2010} -- 20-Oct-2010 Matthew L. Fidler Bug fix -- added mode. (Matthew L. Fidler)
 
 @bye
