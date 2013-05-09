@@ -5,7 +5,7 @@
 ;; Author: Matthew L. Fidler
 ;; Maintainer: Matthew L. Fidler
 ;; Created: Wed Oct 20 15:08:50 2010 (-0500)
-;; Version: 0.20
+;; Version: 0.21
 ;; Last-Updated: Fri Jun 29 12:22:42 2012 (-0500)
 ;;           By: Matthew L. Fidler
 ;;     Update #: 1747
@@ -80,6 +80,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;; 9-May-2013    Matthew L. Fidler  
+;;    Last-Updated: Fri Jun 29 12:22:42 2012 (-0500) #1747 (Matthew L. Fidler)
+;;    Added better auto-installing support for textmate-to-yas.
 ;; 3-May-2013    Matthew L. Fidler  
 ;;    Last-Updated: Fri Jun 29 12:22:42 2012 (-0500) #1747 (Matthew L. Fidler)
 ;;    Better fix for requiring 'textmate-to-yas in Emacs 24+.  It should
@@ -928,7 +931,7 @@ C-c C-y M-a
                 (insert fc)
                 (goto-char (point-max))
                 (unless (search-backward "(require 'textmate-to-yas" nil t)
-                  (insert "(require 'textmate-to-yas nil t)(if (and (or (not (fboundp 'yas---t/)) (not (featurep 'textmate-to-yas))) (fboundp 'package-install))(require 'package)(add-to-list 'package-archives '(\"marmalade\" .\"http://marmalade-repo.org/packages/\"))(package-initialize) (package-install 'textmate-to-yas))\n"))
+                  (insert "(require 'textmate-to-yas nil t)(if (and (or (not (fboundp 'yas---t/)) (not (featurep 'textmate-to-yas)) (not (package-installed-p 'textmate-to-yas))) (fboundp 'package-install))(require 'package)(add-to-list 'package-archives '(\"marmalade\" .\"http://marmalade-repo.org/packages/\"))(package-initialize) (package-install 'textmate-to-yas))\n"))
                 (insert (textmate-yas-menu plist mode))
                 (insert "\n")
                 (emacs-lisp-mode)
@@ -1214,8 +1217,7 @@ The test for presence of the car of ELT-CONS is done with `equal'."
                           (insert fc)
                           (goto-char (point-max))
                           (unless (search-backward "(require 'textmate-to-yas" nil t)
-                            (insert "(require 'textmate-to-yas nil t)(if (and (or (not (fboundp 'yas---t/)) (not (featurep 'textmate-to-yas)))
-                         (fboundp 'package-install))(require 'package)(add-to-list 'package-archives '(\"marmalade\" .\"http://marmalade-repo.org/packages/\"))(package-initialize) (package-install 'textmate-to-yas))\n"))
+                            (insert "(require 'textmate-to-yas nil t)(if (and (or (not (fboundp 'yas---t/)) (not (featurep 'textmate-to-yas)) (not (package-installed-p 'textmate-to-yas))) (fboundp 'package-install))(require 'package)(add-to-list 'package-archives '(\"marmalade\" .\"http://marmalade-repo.org/packages/\"))(package-initialize) (package-install 'textmate-to-yas))\n"))
                           (goto-char (point-max))
                           (unless (search-backward defg nil t)
                             (insert defg)

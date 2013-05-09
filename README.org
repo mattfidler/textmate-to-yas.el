@@ -8,7 +8,7 @@
  - Author :: Matthew L. Fidler
  - Maintainer :: Matthew L. Fidler
  - Created :: Wed Oct 20 15:08:50 2010 (-0500)
- - Version :: 0.20
+ - Version :: 0.21
  - Last-Updated :: Fri Jun 29 12:22:42 2012 (-0500)
  -           By :: Matthew L. Fidler
  -     Update # :: 1747
@@ -85,6 +85,9 @@ TREAT-EMPTY-MATCHES-AS-MISSING-MATCHES SUBEXP)=
 ** Internal Variables
 * History
 
+9-May-2013    Matthew L. Fidler  
+   Last-Updated: Fri Jun 29 12:22:42 2012 (-0500) #1747 (Matthew L. Fidler)
+   Added better auto-installing support for textmate-to-yas.
 3-May-2013    Matthew L. Fidler  
    Last-Updated: Fri Jun 29 12:22:42 2012 (-0500) #1747 (Matthew L. Fidler)
    Better fix for requiring 'textmate-to-yas in Emacs 24+.  It should
